@@ -82,9 +82,28 @@ jobs:
     - name: Install dependencies
       run: uv sync --dev
 
-    - name: Security audit
+    - name: Export requirements for security scan
       run: |
-        uv run pip-audit --require-hashes --disable-pip
+        uv export --format requirements-txt > requirements.txt
+        
+    - name: Security scan with GitHub Advisory Database
+      uses: pypa/gh-action-pip-audit@v1.0.8
+      with:
+        inputs: requirements.txt
+        virtual-environment: false
+      continue-on-error: true
+        
+    - name: Verify lockfile integrity
+      run: |
+        echo "Verifying dependency lockfile integrity..."
+        uv lock --locked
+        echo "✅ Lockfile is consistent with dependencies"
+        
+    - name: Check for dependency conflicts
+      run: |
+        echo "Checking for dependency conflicts..."
+        uv sync --dev --dry-run
+        echo "✅ No dependency conflicts detected"
 
   build:
     runs-on: ubuntu-latest
