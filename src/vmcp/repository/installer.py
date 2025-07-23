@@ -96,7 +96,7 @@ class MCPInstaller:
             # Cleanup on failure
             if install_path.exists():
                 shutil.rmtree(install_path, ignore_errors=True)
-            raise InstallationFailedError(f"Installation failed for {server_id}: {e}")
+            raise InstallationFailedError(f"Installation failed for {server_id}: {e}") from e
 
     async def update_server(self, server_info: MCPServerInfo) -> str:
         """
@@ -138,7 +138,7 @@ class MCPInstaller:
             return str(install_path)
 
         except Exception as e:
-            raise InstallationFailedError(f"Update failed for {server_id}: {e}")
+            raise InstallationFailedError(f"Update failed for {server_id}: {e}") from e
 
     async def uninstall_server(self, server_id: str) -> bool:
         """
@@ -173,7 +173,7 @@ class MCPInstaller:
 
         except Exception as e:
             logger.error(f"Failed to uninstall {server_id}: {e}")
-            raise InstallationFailedError(f"Uninstallation failed: {e}")
+            raise InstallationFailedError(f"Uninstallation failed: {e}") from e
 
     async def is_installed(self, server_id: str) -> bool:
         """
@@ -340,7 +340,7 @@ class MCPInstaller:
         try:
             git.Repo.clone_from(repo_url, install_path)
         except Exception as e:
-            raise InstallationFailedError(f"Git clone failed: {e}")
+            raise InstallationFailedError(f"Git clone failed: {e}") from e
 
         # Install dependencies
         await self._install_dependencies(install_path)
@@ -450,10 +450,10 @@ build-backend = "setuptools.build_meta"
                 stderr=stderr.decode() if stderr else "",
             )
 
-        except asyncio.TimeoutError:
+        except asyncio.TimeoutError as e:
             process.kill()
             await process.wait()
-            raise InstallationFailedError(f"Command timed out: {' '.join(cmd)}")
+            raise InstallationFailedError(f"Command timed out: {' '.join(cmd)}") from e
 
     def _record_installation(
         self,

@@ -194,7 +194,7 @@ class MCPDiscovery:
 
         except Exception as e:
             logger.error(f"Failed to clone repository {repo_url}: {e}")
-            raise RepositoryError(f"Git discovery failed: {e}")
+            raise RepositoryError(f"Git discovery failed: {e}") from e
 
         return servers
 

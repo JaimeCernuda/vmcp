@@ -83,7 +83,7 @@ class ExtensionManager:
                 repo_data = json.load(f)
             return repo_data.get("extensions", [])
         except Exception as e:
-            raise RepositoryError(f"Failed to load repository {repository_id}: {e}")
+            raise RepositoryError(f"Failed to load repository {repository_id}: {e}") from e
 
     def list_installed_extensions(self) -> list[dict[str, Any]]:
         """List all installed extensions."""
@@ -179,7 +179,7 @@ class ExtensionManager:
             # Cleanup on failure
             if install_path.exists():
                 shutil.rmtree(install_path)
-            raise ExtensionError(f"Installation failed: {e}")
+            raise ExtensionError(f"Installation failed: {e}") from e
 
     def uninstall_extension(self, extension_id: str) -> bool:
         """
@@ -210,7 +210,7 @@ class ExtensionManager:
 
         except Exception as e:
             logger.error(f"Failed to uninstall {extension_id}: {e}")
-            raise ExtensionError(f"Uninstallation failed: {e}")
+            raise ExtensionError(f"Uninstallation failed: {e}") from e
 
     def _load_enabled_extensions(self) -> dict[str, Any]:
         """Load enabled extensions configuration."""
@@ -252,7 +252,7 @@ class ExtensionManager:
                 json.dump(self._enabled_extensions, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save enabled extensions: {e}")
-            raise ExtensionError(f"Failed to save configuration: {e}")
+            raise ExtensionError(f"Failed to save configuration: {e}") from e
 
     def enable_extension(
         self, extension_id: str, config: dict[str, Any] | None = None
@@ -283,7 +283,7 @@ class ExtensionManager:
             with open(manifest_path) as f:
                 json.load(f)
         except Exception as e:
-            raise ExtensionError(f"Failed to load manifest: {e}")
+            raise ExtensionError(f"Failed to load manifest: {e}") from e
 
         # Update enabled configuration
         enabled_config = self._load_enabled_extensions()
@@ -409,4 +409,4 @@ class ExtensionManager:
 
         except Exception as e:
             logger.error(f"Failed to update {extension_id}: {e}")
-            raise ExtensionError(f"Update failed: {e}")
+            raise ExtensionError(f"Update failed: {e}") from e

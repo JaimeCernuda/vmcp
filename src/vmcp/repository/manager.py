@@ -149,7 +149,7 @@ class RepositoryManager:
 
         except Exception as e:
             logger.error(f"Failed to install {server_id}: {e}")
-            raise RepositoryError(f"Installation failed: {e}")
+            raise RepositoryError(f"Installation failed: {e}") from e
 
     async def uninstall_server(self, server_id: str, unregister: bool = True) -> bool:
         """
@@ -177,7 +177,7 @@ class RepositoryManager:
 
         except Exception as e:
             logger.error(f"Failed to uninstall {server_id}: {e}")
-            raise RepositoryError(f"Uninstallation failed: {e}")
+            raise RepositoryError(f"Uninstallation failed: {e}") from e
 
     async def update_server(self, server_id: str) -> bool:
         """
@@ -223,7 +223,7 @@ class RepositoryManager:
 
         except Exception as e:
             logger.error(f"Failed to update {server_id}: {e}")
-            raise RepositoryError(f"Update failed: {e}")
+            raise RepositoryError(f"Update failed: {e}") from e
 
     async def list_installed(self) -> list[dict[str, Any]]:
         """

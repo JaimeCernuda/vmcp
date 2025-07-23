@@ -316,14 +316,12 @@ class ContentBasedRouter(RoutingAlgorithm):
             return False
 
         # Check tool name for tools/call method
-        if rule.tool_name and method == "tools/call":
-            if params.get("name") != rule.tool_name:
-                return False
+        if rule.tool_name and method == "tools/call" and params.get("name") != rule.tool_name:
+            return False
 
         # Check resource URI for resources/read method
-        if rule.resource_uri and method == "resources/read":
-            if params.get("uri") != rule.resource_uri:
-                return False
+        if rule.resource_uri and method == "resources/read" and params.get("uri") != rule.resource_uri:
+            return False
 
         # Check resource pattern for resources/read method
         if rule.resource_pattern and method == "resources/read":
@@ -332,9 +330,8 @@ class ContentBasedRouter(RoutingAlgorithm):
                 return False
 
         # Check prompt name for prompts/get method
-        if rule.prompt_name and method == "prompts/get":
-            if params.get("name") != rule.prompt_name:
-                return False
+        if rule.prompt_name and method == "prompts/get" and params.get("name") != rule.prompt_name:
+            return False
 
         # Check custom condition
         if rule.condition:

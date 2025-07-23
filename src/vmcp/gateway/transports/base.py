@@ -301,7 +301,7 @@ class MessageFraming:
 
                 return content.decode("utf-8")
 
-            except ValueError:
+            except ValueError as e:
                 # Not a length prefix - assume it's FastMCP format (direct JSON)
                 if first_line_str.startswith("{") and first_line_str.endswith("}"):
                     # It's a complete JSON message
@@ -310,7 +310,7 @@ class MessageFraming:
                     # Invalid format
                     raise TransportError(
                         f"Invalid message format: {first_line_str[:100]}..."
-                    )
+                    ) from e
 
         except asyncio.IncompleteReadError as e:
             raise TransportError(f"Incomplete message: {e}") from e

@@ -98,10 +98,10 @@ class ProtocolHandler:
 
         except json.JSONDecodeError as e:
             logger.warning(f"JSON parse error: {e}")
-            raise InvalidMessageError(f"Invalid JSON: {e}", validation_errors=[str(e)])
+            raise InvalidMessageError(f"Invalid JSON: {e}", validation_errors=[str(e)]) from e
         except Exception as e:
             logger.error(f"Message parse error: {e}")
-            raise InvalidMessageError(f"Failed to parse message: {e}")
+            raise InvalidMessageError(f"Failed to parse message: {e}") from e
 
     def validate_message(self, message: dict[str, Any]) -> None:
         """
@@ -131,7 +131,7 @@ class ProtocolHandler:
             logger.warning(f"Message validation error: {e.message}")
             raise InvalidMessageError(
                 "Invalid message structure", validation_errors=[e.message]
-            )
+            ) from e
 
     def serialize_message(self, message: dict[str, Any]) -> str:
         """
@@ -159,7 +159,7 @@ class ProtocolHandler:
 
         except Exception as e:
             logger.error(f"Message serialization error: {e}")
-            raise ProtocolError(f"Failed to serialize message: {e}")
+            raise ProtocolError(f"Failed to serialize message: {e}") from e
 
     def create_request(
         self,
