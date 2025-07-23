@@ -7,6 +7,8 @@ for managing servers, routing, and system operations.
 """
 
 import asyncio
+import builtins
+import contextlib
 import json
 import logging
 import os
@@ -16,17 +18,15 @@ import time
 from pathlib import Path
 from typing import Any
 
-import click
 import rich_click as click
 import structlog
 import uvloop
 from rich.console import Console
-from rich.table import Table
-from rich.text import Text
 from rich.panel import Panel
+from rich.table import Table
 
 from ..config.loader import ConfigLoader
-from ..errors import ConfigurationError, ExtensionError, VMCPError
+from ..errors import ConfigurationError, VMCPError
 from ..extensions.manager import ExtensionManager
 from ..gateway.server import GatewayConfig, VMCPGateway
 from ..registry.registry import Registry
@@ -51,7 +51,7 @@ console = Console()
 structlog.configure(
     processors=[
         structlog.processors.TimeStamper(fmt="ISO"),
-        structlog.dev.ConsoleRenderer()
+        structlog.dev.ConsoleRenderer(),
     ],
     logger_factory=structlog.WriteLoggerFactory(),
     wrapper_class=structlog.BoundLogger,
@@ -63,24 +63,17 @@ logger = structlog.get_logger(__name__)
 
 def install_shell_completion(shell: str) -> None:
     """Install shell completion for the specified shell."""
-    import subprocess
-    
-    shell_commands = {
-        'bash': 'complete -C vmcp vmcp',
-        'zsh': 'compdef _vmcp vmcp',
-        'fish': 'complete -c vmcp -f',
-        'powershell': 'Register-ArgumentCompleter -CommandName vmcp -ScriptBlock $__vmcpCompleter'
-    }
-    
-    if shell == 'bash':
-        completion_script = '''
+
+
+    if shell == "bash":
+        completion_script = """
 # vMCP bash completion
 _vmcp_completion() {
     local cur prev opts
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    
+
     case "${prev}" in
         vmcp)
             opts="start stop status list info config repo extension health metrics mount unmount --help --version"
@@ -98,29 +91,37 @@ _vmcp_completion() {
             return 0
             ;;
     esac
-    
+
     COMPREPLY=( $(compgen -W "${opts}" -- ${cur}) )
     return 0
 }
 complete -F _vmcp_completion vmcp
-'''
-        console.print(Panel(completion_script, title="[bold green]Bash Completion[/bold green]", 
-                           title_align="left", border_style="green"))
-        console.print("[yellow]Add the above to your ~/.bashrc or ~/.bash_profile[/yellow]")
-    
-    elif shell == 'zsh':
-        completion_script = '''
+"""
+        console.print(
+            Panel(
+                completion_script,
+                title="[bold green]Bash Completion[/bold green]",
+                title_align="left",
+                border_style="green",
+            )
+        )
+        console.print(
+            "[yellow]Add the above to your ~/.bashrc or ~/.bash_profile[/yellow]"
+        )
+
+    elif shell == "zsh":
+        completion_script = """
 # vMCP zsh completion
 #compdef vmcp
 
 _vmcp() {
     local context state state_descr line
     typeset -A opt_args
-    
+
     _arguments -C \\
         '1: :->commands' \\
         '*: :->args' && return 0
-    
+
     case $state in
         commands)
             _values "vmcp commands" \\
@@ -148,14 +149,22 @@ _vmcp() {
 }
 
 _vmcp "$@"
-'''
-        console.print(Panel(completion_script, title="[bold green]Zsh Completion[/bold green]", 
-                           title_align="left", border_style="green"))
-        console.print("[yellow]Add the above to your ~/.zshrc or save as _vmcp in your $fpath[/yellow]")
-    
+"""
+        console.print(
+            Panel(
+                completion_script,
+                title="[bold green]Zsh Completion[/bold green]",
+                title_align="left",
+                border_style="green",
+            )
+        )
+        console.print(
+            "[yellow]Add the above to your ~/.zshrc or save as _vmcp in your $fpath[/yellow]"
+        )
+
     else:
         console.print(f"[red]Shell completion for {shell} not implemented yet[/red]")
-    
+
     sys.exit(0)
 
 
@@ -171,20 +180,14 @@ class VMCPCLIContext:
 
 @click.group()
 @click.option(
-    "--config", "-c",
-    type=click.Path(exists=True),
-    help="Path to configuration file"
+    "--config", "-c", type=click.Path(exists=True), help="Path to configuration file"
 )
-@click.option(
-    "--verbose", "-v",
-    is_flag=True,
-    help="Enable verbose output"
-)
+@click.option("--verbose", "-v", is_flag=True, help="Enable verbose output")
 @click.pass_context
 def cli(ctx: click.Context, config: str | None, verbose: bool) -> None:
     """
     [bold blue]vMCP Gateway[/bold blue] - Virtual Model Context Protocol unified interface.
-    
+
     The vMCP Gateway provides a unified abstraction layer that aggregates
     multiple MCP servers through a single interface, similar to how Virtual
     File Systems provide unified access to different storage backends.
@@ -201,28 +204,11 @@ def cli(ctx: click.Context, config: str | None, verbose: bool) -> None:
 
 
 @cli.command()
-@click.option(
-    "--daemon", "-d",
-    is_flag=True,
-    help="Run as daemon (background process)"
-)
-@click.option(
-    "--port", "-p",
-    type=int,
-    help="Override default port"
-)
-@click.option(
-    "--host", "-h",
-    type=str,
-    help="Override default host"
-)
+@click.option("--daemon", "-d", is_flag=True, help="Run as daemon (background process)")
+@click.option("--port", "-p", type=int, help="Override default port")
+@click.option("--host", "-h", type=str, help="Override default host")
 @click.pass_context
-def start(
-    ctx: click.Context,
-    daemon: bool,
-    port: int | None,
-    host: str | None
-) -> None:
+def start(ctx: click.Context, daemon: bool, port: int | None, host: str | None) -> None:
     """Start the vMCP Gateway server."""
     try:
         # Use uvloop for better async performance
@@ -237,9 +223,13 @@ def start(
 
         # Apply command line overrides
         if port:
-            config_data.setdefault("transports", {}).setdefault("http", {})["port"] = port
+            config_data.setdefault("transports", {}).setdefault("http", {})["port"] = (
+                port
+            )
         if host:
-            config_data.setdefault("transports", {}).setdefault("http", {})["host"] = host
+            config_data.setdefault("transports", {}).setdefault("http", {})["host"] = (
+                host
+            )
 
         # Create gateway configuration
         gateway_config = GatewayConfig(**config_data.get("gateway", {}))
@@ -315,19 +305,14 @@ async def _run_daemon(gateway: VMCPGateway) -> None:
 
     finally:
         # Clean up PID file
-        try:
+        with contextlib.suppress(builtins.BaseException):
             pid_file.unlink(missing_ok=True)
-        except:
-            pass
         await gateway.stop()
 
 
 @cli.command()
 @click.option(
-    "--timeout", "-t",
-    type=int,
-    default=10,
-    help="Shutdown timeout in seconds"
+    "--timeout", "-t", type=int, default=10, help="Shutdown timeout in seconds"
 )
 def stop(timeout: int) -> None:
     """Stop the vMCP Gateway server."""
@@ -349,6 +334,7 @@ def stop(timeout: int) -> None:
 
         # Wait for process to exit
         import time
+
         for _ in range(timeout):
             try:
                 os.kill(pid, 0)  # Check if process exists
@@ -375,10 +361,11 @@ def stop(timeout: int) -> None:
 
 @cli.command()
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
 @click.pass_context
 def status(ctx: click.Context, output_format: str) -> None:
@@ -391,6 +378,7 @@ def status(ctx: click.Context, output_format: str) -> None:
             try:
                 pid = int(pid_file.read_text().strip())
                 import os
+
                 os.kill(pid, 0)  # Check if process exists
                 running = True
             except (ValueError, ProcessLookupError):
@@ -401,24 +389,16 @@ def status(ctx: click.Context, output_format: str) -> None:
             pid = None
 
         # Try to connect to gateway for detailed status
-        status_data = {
-            "running": running,
-            "pid": pid,
-            "timestamp": time.time()
-        }
+        status_data = {"running": running, "pid": pid, "timestamp": time.time()}
 
         if running:
             # Try to get detailed status from running gateway
-            try:
+            with contextlib.suppress(Exception):
                 # This would connect to the running gateway via transport
                 # For now, just show basic status
-                status_data.update({
-                    "uptime": "unknown",
-                    "servers": "unknown",
-                    "health": "unknown"
-                })
-            except Exception:
-                pass
+                status_data.update(
+                    {"uptime": "unknown", "servers": "unknown", "health": "unknown"}
+                )
 
         if output_format == "json":
             click.echo(json.dumps(status_data, indent=2))
@@ -438,17 +418,18 @@ def status(ctx: click.Context, output_format: str) -> None:
 
 @cli.command()
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json", "table"]),
     default="table",
-    help="Output format"
+    help="Output format",
 )
 @click.option(
     "--filter-enabled/--no-filter-enabled",
     default=True,
-    help="Only show enabled servers"
+    help="Only show enabled servers",
 )
-def list(output_format: str, filter_enabled: bool) -> None:
+def list_servers(output_format: str, filter_enabled: bool) -> None:
     """List all registered MCP servers."""
     try:
         # Load configuration to get registry
@@ -457,7 +438,10 @@ def list(output_format: str, filter_enabled: bool) -> None:
 
         # Create registry instance
         from ..registry.registry import Registry
-        registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+
+        Registry(
+            config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+        )
 
         # This would require async initialization
         # For now, show placeholder data
@@ -468,7 +452,7 @@ def list(output_format: str, filter_enabled: bool) -> None:
                 "transport": "stdio",
                 "enabled": True,
                 "healthy": True,
-                "capabilities": ["tools", "resources"]
+                "capabilities": ["tools", "resources"],
             }
         ]
 
@@ -483,7 +467,9 @@ def list(output_format: str, filter_enabled: bool) -> None:
                 return
 
             # Simple table output
-            click.echo(f"{'ID':<20} {'Name':<30} {'Transport':<10} {'Status':<10} {'Capabilities'}")
+            click.echo(
+                f"{'ID':<20} {'Name':<30} {'Transport':<10} {'Status':<10} {'Capabilities'}"
+            )
             click.echo("-" * 90)
 
             for server in servers_data:
@@ -492,7 +478,9 @@ def list(output_format: str, filter_enabled: bool) -> None:
                     status = "- disabled"
 
                 caps = ", ".join(server["capabilities"])
-                click.echo(f"{server['id']:<20} {server['name']:<30} {server['transport']:<10} {status:<10} {caps}")
+                click.echo(
+                    f"{server['id']:<20} {server['name']:<30} {server['transport']:<10} {status:<10} {caps}"
+                )
         else:
             # Text format
             for server in servers_data:
@@ -514,20 +502,14 @@ def list(output_format: str, filter_enabled: bool) -> None:
 
 @cli.command()
 @click.argument("server_config", type=click.Path(exists=True))
-@click.option(
-    "--mount-point", "-m",
-    help="Mount point for server capabilities"
-)
-@click.option(
-    "--enable/--no-enable",
-    default=True,
-    help="Enable server after mounting"
-)
+@click.option("--mount-point", "-m", help="Mount point for server capabilities")
+@click.option("--enable/--no-enable", default=True, help="Enable server after mounting")
 def mount(server_config: str, mount_point: str | None, enable: bool) -> None:
     """Mount a new MCP server from configuration file."""
     try:
         # Load server configuration
         import toml
+
         with open(server_config) as f:
             config = toml.load(f)
 
@@ -552,9 +534,7 @@ def mount(server_config: str, mount_point: str | None, enable: bool) -> None:
 @cli.command()
 @click.argument("server_id")
 @click.option(
-    "--force", "-f",
-    is_flag=True,
-    help="Force unmount even if server is in use"
+    "--force", "-f", is_flag=True, help="Force unmount even if server is in use"
 )
 def unmount(server_id: str, force: bool) -> None:
     """Unmount an MCP server."""
@@ -573,10 +553,11 @@ def unmount(server_id: str, force: bool) -> None:
 @cli.command()
 @click.argument("server_id", required=False)
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
 def info(server_id: str | None, output_format: str) -> None:
     """Show detailed information about server(s) or system."""
@@ -594,13 +575,13 @@ def info(server_id: str | None, output_format: str) -> None:
                     "requests_total": 0,
                     "requests_success": 0,
                     "requests_failed": 0,
-                    "uptime": "0s"
+                    "uptime": "0s",
                 },
                 "configuration": {
                     "command": ["python", "-m", "example_server"],
                     "args": [],
-                    "env": {}
-                }
+                    "env": {},
+                },
             }
 
             if output_format == "json":
@@ -609,11 +590,15 @@ def info(server_id: str | None, output_format: str) -> None:
                 click.echo(f"Server Information: {server_id}")
                 click.echo(f"  Name: {server_info['name']}")
                 click.echo(f"  Transport: {server_info['transport']}")
-                click.echo(f"  Status: {'enabled' if server_info['enabled'] else 'disabled'}")
-                click.echo(f"  Health: {'healthy' if server_info['healthy'] else 'unhealthy'}")
+                click.echo(
+                    f"  Status: {'enabled' if server_info['enabled'] else 'disabled'}"
+                )
+                click.echo(
+                    f"  Health: {'healthy' if server_info['healthy'] else 'unhealthy'}"
+                )
                 click.echo(f"  Capabilities: {', '.join(server_info['capabilities'])}")
                 click.echo("  Statistics:")
-                for key, value in server_info['stats'].items():
+                for key, value in server_info["stats"].items():
                     click.echo(f"    {key}: {value}")
         else:
             # Show system info
@@ -624,7 +609,7 @@ def info(server_id: str | None, output_format: str) -> None:
                 "log_level": "INFO",
                 "servers_total": 1,
                 "servers_enabled": 1,
-                "servers_healthy": 1
+                "servers_healthy": 1,
             }
 
             if output_format == "json":
@@ -661,24 +646,19 @@ def repo():
 
 
 @repo.command()
-@click.option(
-    "--sources", "-s",
-    multiple=True,
-    help="Discovery sources to scan"
-)
-@click.option(
-    "--refresh", "-r",
-    is_flag=True,
-    help="Refresh discovery cache"
-)
+@click.option("--sources", "-s", multiple=True, help="Discovery sources to scan")
+@click.option("--refresh", "-r", is_flag=True, help="Refresh discovery cache")
 def discover(sources: tuple, refresh: bool) -> None:
     """Discover available MCP servers."""
+
     async def _discover():
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
 
-            registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+            registry = Registry(
+                config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+            )
             await registry.initialize()
 
             repo_manager = RepositoryManager(registry)
@@ -690,8 +670,7 @@ def discover(sources: tuple, refresh: bool) -> None:
                 click.echo(f"✓ Auto-registered {count} iowarp-mcps servers")
 
             servers = await repo_manager.discover_servers(
-                list(sources) if sources else None,
-                refresh
+                list(sources) if sources else None, refresh
             )
 
             click.echo(f"✓ Discovered {len(servers)} MCP servers")
@@ -712,19 +691,25 @@ def discover(sources: tuple, refresh: bool) -> None:
 @click.option("--capabilities", multiple=True, help="Filter by capabilities")
 @click.option("--installed", is_flag=True, help="Show only installed servers")
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json", "table"]),
     default="table",
-    help="Output format"
+    help="Output format",
 )
-def search(query: str, tags: tuple, capabilities: tuple, installed: bool, output_format: str) -> None:
+def search(
+    query: str, tags: tuple, capabilities: tuple, installed: bool, output_format: str
+) -> None:
     """Search for MCP servers."""
+
     async def _search():
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
 
-            registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+            registry = Registry(
+                config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+            )
             await registry.initialize()
 
             repo_manager = RepositoryManager(registry)
@@ -734,7 +719,7 @@ def search(query: str, tags: tuple, capabilities: tuple, installed: bool, output
                 query,
                 list(tags) if tags else None,
                 list(capabilities) if capabilities else None,
-                installed
+                installed,
             )
 
             if output_format == "json":
@@ -753,7 +738,9 @@ def search(query: str, tags: tuple, capabilities: tuple, installed: bool, output
                         status += " + registered"
 
                     caps = ", ".join(server.get("capabilities", {}).keys())
-                    click.echo(f"{server['id']:<20} {server['name']:<25} {status:<15} {caps}")
+                    click.echo(
+                        f"{server['id']:<20} {server['name']:<25} {status:<15} {caps}"
+                    )
             else:
                 for server in results:
                     click.echo(f"Server: {server['id']}")
@@ -761,7 +748,9 @@ def search(query: str, tags: tuple, capabilities: tuple, installed: bool, output
                     click.echo(f"  Description: {server['description']}")
                     click.echo(f"  Installed: {server.get('installed', False)}")
                     click.echo(f"  Registered: {server.get('registered', False)}")
-                    click.echo(f"  Capabilities: {', '.join(server.get('capabilities', {}).keys())}")
+                    click.echo(
+                        f"  Capabilities: {', '.join(server.get('capabilities', {}).keys())}"
+                    )
                     click.echo()
 
         except Exception as e:
@@ -777,12 +766,15 @@ def search(query: str, tags: tuple, capabilities: tuple, installed: bool, output
 @click.option("--no-enable", is_flag=True, help="Don't enable after installation")
 def install(server_id: str, no_register: bool, no_enable: bool) -> None:
     """Install an MCP server."""
+
     async def _install():
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
 
-            registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+            registry = Registry(
+                config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+            )
             await registry.initialize()
 
             repo_manager = RepositoryManager(registry)
@@ -791,9 +783,7 @@ def install(server_id: str, no_register: bool, no_enable: bool) -> None:
             click.echo(f"Installing MCP server: {server_id}")
 
             success = await repo_manager.install_server(
-                server_id,
-                register=not no_register,
-                enable=not no_enable
+                server_id, register=not no_register, enable=not no_enable
             )
 
             if success:
@@ -814,12 +804,15 @@ def install(server_id: str, no_register: bool, no_enable: bool) -> None:
 @click.option("--keep-config", is_flag=True, help="Keep vMCP configuration")
 def uninstall(server_id: str, keep_config: bool) -> None:
     """Uninstall an MCP server."""
+
     async def _uninstall():
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
 
-            registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+            registry = Registry(
+                config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+            )
             await registry.initialize()
 
             repo_manager = RepositoryManager(registry)
@@ -828,8 +821,7 @@ def uninstall(server_id: str, keep_config: bool) -> None:
             click.echo(f"Uninstalling MCP server: {server_id}")
 
             success = await repo_manager.uninstall_server(
-                server_id,
-                unregister=not keep_config
+                server_id, unregister=not keep_config
             )
 
             if success:
@@ -847,19 +839,23 @@ def uninstall(server_id: str, keep_config: bool) -> None:
 
 @repo.command()
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
 def stats(output_format: str) -> None:
     """Show repository statistics."""
+
     async def _stats():
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
 
-            registry = Registry(config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry"))
+            registry = Registry(
+                config_data.get("gateway", {}).get("registry_path", "~/.vmcp/registry")
+            )
             await registry.initialize()
 
             repo_manager = RepositoryManager(registry)
@@ -895,9 +891,7 @@ def stats(output_format: str) -> None:
 
 @config.command()
 @click.option(
-    "--output", "-o",
-    type=click.Path(),
-    help="Output configuration file path"
+    "--output", "-o", type=click.Path(), help="Output configuration file path"
 )
 def init(output: str | None) -> None:
     """Initialize default configuration file."""
@@ -914,21 +908,19 @@ def init(output: str | None) -> None:
                 "cache_enabled": True,
                 "cache_ttl": 300,
                 "max_connections": 1000,
-                "request_timeout": 30
+                "request_timeout": 30,
             },
             "transports": {
                 "stdio": {"enabled": True},
                 "http": {"enabled": False, "port": 3000, "host": "127.0.0.1"},
-                "websocket": {"enabled": False, "port": 3001, "host": "127.0.0.1"}
+                "websocket": {"enabled": False, "port": 3001, "host": "127.0.0.1"},
             },
-            "routing": {
-                "default_strategy": "hybrid",
-                "load_balancer": "round_robin"
-            }
+            "routing": {"default_strategy": "hybrid", "load_balancer": "round_robin"},
         }
 
         import toml
-        with open(config_path, 'w') as f:
+
+        with open(config_path, "w") as f:
             toml.dump(default_config, f)
 
         click.echo(f" Created default configuration at {config_path}")
@@ -970,10 +962,11 @@ def health():
 
 @health.command()
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
 def check(output_format: str) -> None:
     """Check system health."""
@@ -983,10 +976,22 @@ def check(output_format: str) -> None:
             "status": "healthy",
             "timestamp": time.time(),
             "checks": [
-                {"name": "gateway", "status": "healthy", "message": "Gateway is running"},
-                {"name": "registry", "status": "healthy", "message": "Registry is accessible"},
-                {"name": "servers", "status": "healthy", "message": "All servers healthy"}
-            ]
+                {
+                    "name": "gateway",
+                    "status": "healthy",
+                    "message": "Gateway is running",
+                },
+                {
+                    "name": "registry",
+                    "status": "healthy",
+                    "message": "Registry is accessible",
+                },
+                {
+                    "name": "servers",
+                    "status": "healthy",
+                    "message": "All servers healthy",
+                },
+            ],
         }
 
         if output_format == "json":
@@ -994,8 +999,8 @@ def check(output_format: str) -> None:
         else:
             click.echo(f"System Health: {health_data['status']}")
             click.echo("Component Checks:")
-            for check in health_data['checks']:
-                status_icon = "" if check['status'] == 'healthy' else ""
+            for check in health_data["checks"]:
+                status_icon = "" if check["status"] == "healthy" else ""
                 click.echo(f"  {status_icon} {check['name']}: {check['message']}")
 
     except Exception as e:
@@ -1014,10 +1019,11 @@ def metrics():
 
 @metrics.command()
 @click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json", "prometheus"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
 def show(output_format: str) -> None:
     """Show system metrics."""
@@ -1032,7 +1038,7 @@ def show(output_format: str) -> None:
             "servers_total": 1,
             "cache_hit_rate": 0.0,
             "error_rate": 0.0,
-            "uptime": "0s"
+            "uptime": "0s",
         }
 
         if output_format == "json":
@@ -1040,7 +1046,7 @@ def show(output_format: str) -> None:
         elif output_format == "prometheus":
             # Simple Prometheus format
             for key, value in metrics_data.items():
-                if isinstance(value, (int, float)):
+                if isinstance(value, int | float):
                     click.echo(f"vmcp_{key} {value}")
         else:
             click.echo("vMCP Gateway Metrics")
@@ -1049,7 +1055,9 @@ def show(output_format: str) -> None:
             click.echo(f"  Requests Success: {metrics_data['requests_success']}")
             click.echo(f"  Requests Failed: {metrics_data['requests_failed']}")
             click.echo(f"  Active Requests: {metrics_data['active_requests']}")
-            click.echo(f"  Servers Healthy: {metrics_data['servers_healthy']}/{metrics_data['servers_total']}")
+            click.echo(
+                f"  Servers Healthy: {metrics_data['servers_healthy']}/{metrics_data['servers_total']}"
+            )
             click.echo(f"  Cache Hit Rate: {metrics_data['cache_hit_rate']:.1%}")
             click.echo(f"  Error Rate: {metrics_data['error_rate']:.1%}")
 
@@ -1070,31 +1078,24 @@ def extension():
 
 @extension.command("list")
 @click.option(
-    "--repository", "-r",
-    default="builtin",
-    help="Repository to list extensions from"
+    "--repository", "-r", default="builtin", help="Repository to list extensions from"
 )
+@click.option("--installed", "-i", is_flag=True, help="List installed extensions only")
+@click.option("--enabled", "-e", is_flag=True, help="List enabled extensions only")
 @click.option(
-    "--installed", "-i",
-    is_flag=True,
-    help="List installed extensions only"
-)
-@click.option(
-    "--enabled", "-e", 
-    is_flag=True,
-    help="List enabled extensions only"
-)
-@click.option(
-    "--format", "output_format",
+    "--format",
+    "output_format",
     type=click.Choice(["text", "json"]),
     default="text",
-    help="Output format"
+    help="Output format",
 )
-def list_extensions(repository: str, installed: bool, enabled: bool, output_format: str) -> None:
+def list_extensions(
+    repository: str, installed: bool, enabled: bool, output_format: str
+) -> None:
     """List available, installed, or enabled extensions."""
     try:
         ext_manager = ExtensionManager()
-        
+
         if installed:
             extensions = ext_manager.list_installed_extensions()
             title = "🔧 Installed Extensions"
@@ -1113,7 +1114,7 @@ def list_extensions(repository: str, installed: bool, enabled: bool, output_form
             extensions = ext_manager.list_available_extensions(repository)
             title = f"📦 Available Extensions - {repository.title()}"
             title_style = "bold cyan"
-        
+
         if output_format == "json":
             console.print_json(json.dumps({"extensions": extensions}, indent=2))
         else:
@@ -1121,22 +1122,27 @@ def list_extensions(repository: str, installed: bool, enabled: bool, output_form
                 console.print(f"[{title_style}]{title}[/{title_style}]")
                 console.print("[yellow]No extensions found[/yellow]")
                 return
-            
+
             # Create rich table
-            table = Table(title=title, title_style=title_style, show_header=True, header_style="bold magenta")
+            table = Table(
+                title=title,
+                title_style=title_style,
+                show_header=True,
+                header_style="bold magenta",
+            )
             table.add_column("ID", style="cyan", no_wrap=True, width=18)
             table.add_column("Name", style="white", width=28)
             table.add_column("Version", style="dim", width=8)
             table.add_column("Category", style="blue", width=16)
             table.add_column("Status", style="green", width=12)
-            
+
             # Add rows with proper formatting
             for ext in extensions:
                 ext_id = ext.get("id", ext.get("name", "unknown"))
                 name = ext.get("display_name", ext.get("name", ""))
                 version = ext.get("version", "unknown")
                 category = ext.get("category", "unknown")
-                
+
                 # Format status with colors and icons
                 if installed or enabled:
                     if ext.get("enabled", False):
@@ -1145,84 +1151,93 @@ def list_extensions(repository: str, installed: bool, enabled: bool, output_form
                         status = "[yellow]○ disabled[/yellow]"
                 else:
                     status = "[dim]- available[/dim]"
-                
+
                 # Truncate long names
                 if len(name) > 25:
                     name = name[:22] + "..."
-                
+
                 table.add_row(ext_id, name, version, category, status)
-            
+
             console.print(table)
-            
+
             # Add summary
             if extensions:
                 total_count = len(extensions)
                 if enabled:
-                    console.print(f"[dim]Total: {total_count} enabled extension{'s' if total_count != 1 else ''}[/dim]")
+                    console.print(
+                        f"[dim]Total: {total_count} enabled extension{'s' if total_count != 1 else ''}[/dim]"
+                    )
                 elif installed:
-                    enabled_count = sum(1 for ext in extensions if ext.get("enabled", False))
-                    console.print(f"[dim]Total: {total_count} installed, {enabled_count} enabled[/dim]")
+                    enabled_count = sum(
+                        1 for ext in extensions if ext.get("enabled", False)
+                    )
+                    console.print(
+                        f"[dim]Total: {total_count} installed, {enabled_count} enabled[/dim]"
+                    )
                 else:
-                    console.print(f"[dim]Total: {total_count} extension{'s' if total_count != 1 else ''} available[/dim]")
-    
+                    console.print(
+                        f"[dim]Total: {total_count} extension{'s' if total_count != 1 else ''} available[/dim]"
+                    )
+
     except Exception as e:
         console.print(f"[red]✗ Error listing extensions: {e}[/red]", err=True)
         sys.exit(1)
 
 
-@extension.command()
+@extension.command("install")
 @click.argument("extension_id")
 @click.option(
-    "--repository", "-r",
-    default="builtin", 
-    help="Repository to install from"
+    "--repository", "-r", default="builtin", help="Repository to install from"
 )
-def install(extension_id: str, repository: str) -> None:
+def install_extension(extension_id: str, repository: str) -> None:
     """Install an extension."""
     try:
         ext_manager = ExtensionManager()
-        
-        with console.status(f"[cyan]Installing extension: {extension_id} from {repository}...[/cyan]", spinner="dots"):
+
+        with console.status(
+            f"[cyan]Installing extension: {extension_id} from {repository}...[/cyan]",
+            spinner="dots",
+        ):
             success = ext_manager.install_extension(extension_id, repository)
-        
+
         if success:
             console.print(f"[green]✓ Successfully installed {extension_id}[/green]")
-            console.print("[dim]💡 Use 'vmcp extension enable' to enable the extension[/dim]")
+            console.print(
+                "[dim]💡 Use 'vmcp extension enable' to enable the extension[/dim]"
+            )
         else:
             console.print(f"[red]✗ Failed to install {extension_id}[/red]", err=True)
             sys.exit(1)
-    
+
     except Exception as e:
         console.print(f"[red]✗ Error installing extension: {e}[/red]", err=True)
         sys.exit(1)
 
 
-@extension.command()
+@extension.command("uninstall")
 @click.argument("extension_id")
-@click.option(
-    "--force", "-f",
-    is_flag=True,
-    help="Force uninstall even if enabled"
-)
-def uninstall(extension_id: str, force: bool) -> None:
+@click.option("--force", "-f", is_flag=True, help="Force uninstall even if enabled")
+def uninstall_extension(extension_id: str, force: bool) -> None:
     """Uninstall an extension."""
     try:
         ext_manager = ExtensionManager()
-        
+
         if not force and ext_manager.is_extension_enabled(extension_id):
             click.echo(f"Extension {extension_id} is currently enabled.")
-            click.echo("Use --force to uninstall anyway, or disable first with 'vmcp extension disable'")
+            click.echo(
+                "Use --force to uninstall anyway, or disable first with 'vmcp extension disable'"
+            )
             sys.exit(1)
-        
+
         click.echo(f"Uninstalling extension: {extension_id}")
         success = ext_manager.uninstall_extension(extension_id)
-        
+
         if success:
             click.echo(f"✓ Successfully uninstalled {extension_id}")
         else:
             click.echo(f"✗ Failed to uninstall {extension_id}", err=True)
             sys.exit(1)
-    
+
     except Exception as e:
         click.echo(f"Error uninstalling extension: {e}", err=True)
         sys.exit(1)
@@ -1230,15 +1245,12 @@ def uninstall(extension_id: str, force: bool) -> None:
 
 @extension.command()
 @click.argument("extension_id")
-@click.option(
-    "--config", "-c",
-    help="JSON configuration for the extension"
-)
+@click.option("--config", "-c", help="JSON configuration for the extension")
 def enable(extension_id: str, config: str | None) -> None:
     """Enable an installed extension."""
     try:
         ext_manager = ExtensionManager()
-        
+
         # Parse config if provided
         ext_config = {}
         if config:
@@ -1248,17 +1260,19 @@ def enable(extension_id: str, config: str | None) -> None:
             except json.JSONDecodeError as e:
                 console.print(f"[red]Invalid JSON configuration: {e}[/red]", err=True)
                 sys.exit(1)
-        
-        with console.status(f"[green]Enabling extension: {extension_id}...[/green]", spinner="dots"):
+
+        with console.status(
+            f"[green]Enabling extension: {extension_id}...[/green]", spinner="dots"
+        ):
             success = ext_manager.enable_extension(extension_id, ext_config)
-        
+
         if success:
             console.print(f"[green]✅ Successfully enabled {extension_id}[/green]")
             console.print("[dim]🚀 Extension is now available to vMCP Gateway[/dim]")
         else:
             console.print(f"[red]✗ Failed to enable {extension_id}[/red]", err=True)
             sys.exit(1)
-    
+
     except Exception as e:
         console.print(f"[red]✗ Error enabling extension: {e}[/red]", err=True)
         sys.exit(1)
@@ -1270,16 +1284,16 @@ def disable(extension_id: str) -> None:
     """Disable an extension."""
     try:
         ext_manager = ExtensionManager()
-        
+
         click.echo(f"Disabling extension: {extension_id}")
         success = ext_manager.disable_extension(extension_id)
-        
+
         if success:
             click.echo(f"✓ Successfully disabled {extension_id}")
         else:
             click.echo(f"✗ Failed to disable {extension_id}", err=True)
             sys.exit(1)
-    
+
     except Exception as e:
         click.echo(f"Error disabling extension: {e}", err=True)
         sys.exit(1)
@@ -1287,41 +1301,37 @@ def disable(extension_id: str) -> None:
 
 @extension.command()
 @click.argument("extension_id")
-@click.option(
-    "--repository", "-r",
-    default="builtin",
-    help="Repository to update from"
-)
+@click.option("--repository", "-r", default="builtin", help="Repository to update from")
 def update(extension_id: str, repository: str) -> None:
     """Update an extension to the latest version."""
     try:
         ext_manager = ExtensionManager()
-        
+
         click.echo(f"Updating extension: {extension_id} from {repository}")
         success = ext_manager.update_extension(extension_id, repository)
-        
+
         if success:
             click.echo(f"✓ Successfully updated {extension_id}")
         else:
             click.echo(f"✗ Failed to update {extension_id}", err=True)
             sys.exit(1)
-    
+
     except Exception as e:
         click.echo(f"Error updating extension: {e}", err=True)
         sys.exit(1)
 
 
-@extension.command()
+@extension.command("info")
 @click.argument("extension_id")
-def info(extension_id: str) -> None:
+def extension_info(extension_id: str) -> None:
     """Show detailed information about an extension."""
     try:
         ext_manager = ExtensionManager()
-        
+
         # Try to get manifest from installed extension first
         manifest = ext_manager.get_extension_manifest(extension_id)
         is_installed = True
-        
+
         if not manifest:
             # Try to get from repository
             available_exts = ext_manager.list_available_extensions("builtin")
@@ -1330,92 +1340,115 @@ def info(extension_id: str) -> None:
                     manifest = ext
                     is_installed = False
                     break
-        
+
         if not manifest:
             console.print(f"[red]Extension not found: {extension_id}[/red]", err=True)
             sys.exit(1)
-        
+
         # Create info panel
         info_content = []
-        
+
         # Basic information
-        name = manifest.get('display_name', manifest.get('name', extension_id))
+        name = manifest.get("display_name", manifest.get("name", extension_id))
         info_content.append(f"[bold cyan]Name:[/bold cyan] {name}")
-        info_content.append(f"[bold cyan]ID:[/bold cyan] {manifest.get('name', extension_id)}")
-        info_content.append(f"[bold cyan]Version:[/bold cyan] {manifest.get('version', 'unknown')}")
-        
+        info_content.append(
+            f"[bold cyan]ID:[/bold cyan] {manifest.get('name', extension_id)}"
+        )
+        info_content.append(
+            f"[bold cyan]Version:[/bold cyan] {manifest.get('version', 'unknown')}"
+        )
+
         # Description
-        description = manifest.get('description', 'No description')
+        description = manifest.get("description", "No description")
         info_content.append(f"[bold cyan]Description:[/bold cyan] {description}")
-        
-        if manifest.get('long_description'):
-            info_content.append(f"[bold cyan]Details:[/bold cyan] {manifest['long_description']}")
-        
+
+        if manifest.get("long_description"):
+            info_content.append(
+                f"[bold cyan]Details:[/bold cyan] {manifest['long_description']}"
+            )
+
         # Author
-        author = manifest.get('author', {})
+        author = manifest.get("author", {})
         if isinstance(author, dict):
             author_str = f"{author.get('name', 'Unknown')}"
-            if author.get('email'):
+            if author.get("email"):
                 author_str += f" <{author.get('email')}>"
             info_content.append(f"[bold cyan]Author:[/bold cyan] {author_str}")
         else:
             info_content.append(f"[bold cyan]Author:[/bold cyan] {author}")
-        
+
         # Category and keywords
-        category = manifest.get('category', 'unknown')
+        category = manifest.get("category", "unknown")
         info_content.append(f"[bold cyan]Category:[/bold cyan] [blue]{category}[/blue]")
-        
-        keywords = manifest.get('keywords', [])
+
+        keywords = manifest.get("keywords", [])
         if keywords:
             keywords_str = ", ".join([f"[dim]{kw}[/dim]" for kw in keywords])
             info_content.append(f"[bold cyan]Keywords:[/bold cyan] {keywords_str}")
-        
+
         # Status
         if is_installed:
-            enabled_status = "enabled" if ext_manager.is_extension_enabled(extension_id) else "disabled"
+            enabled_status = (
+                "enabled"
+                if ext_manager.is_extension_enabled(extension_id)
+                else "disabled"
+            )
             status_color = "green" if enabled_status == "enabled" else "yellow"
             status_icon = "✅" if enabled_status == "enabled" else "○"
-            info_content.append(f"[bold cyan]Status:[/bold cyan] [{status_color}]{status_icon} installed ({enabled_status})[/{status_color}]")
-            
+            info_content.append(
+                f"[bold cyan]Status:[/bold cyan] [{status_color}]{status_icon} installed ({enabled_status})[/{status_color}]"
+            )
+
             installed_path = ext_manager.installed_dir / extension_id
-            info_content.append(f"[bold cyan]Path:[/bold cyan] [dim]{installed_path}[/dim]")
+            info_content.append(
+                f"[bold cyan]Path:[/bold cyan] [dim]{installed_path}[/dim]"
+            )
         else:
-            info_content.append(f"[bold cyan]Status:[/bold cyan] [dim]- available for installation[/dim]")
-        
+            info_content.append(
+                "[bold cyan]Status:[/bold cyan] [dim]- available for installation[/dim]"
+            )
+
         # Display main panel
-        console.print(Panel(
-            "\n".join(info_content),
-            title=f"[bold blue]📦 Extension Information[/bold blue]",
-            title_align="left",
-            border_style="blue"
-        ))
-        
+        console.print(
+            Panel(
+                "\n".join(info_content),
+                title="[bold blue]📦 Extension Information[/bold blue]",
+                title_align="left",
+                border_style="blue",
+            )
+        )
+
         # Tools information
-        tools = manifest.get('tools', [])
+        tools = manifest.get("tools", [])
         if tools:
-            tools_table = Table(title="🔧 Available Tools", title_style="bold green", show_header=True, header_style="bold magenta")
+            tools_table = Table(
+                title="🔧 Available Tools",
+                title_style="bold green",
+                show_header=True,
+                header_style="bold magenta",
+            )
             tools_table.add_column("Tool", style="cyan", width=20)
             tools_table.add_column("Description", style="white")
-            
+
             for tool in tools:
                 if isinstance(tool, dict):
-                    tool_name = tool.get('name', 'unknown')
-                    tool_desc = tool.get('description', 'No description')
+                    tool_name = tool.get("name", "unknown")
+                    tool_desc = tool.get("description", "No description")
                 else:
                     tool_name = str(tool)
                     tool_desc = "No description"
-                
+
                 tools_table.add_row(tool_name, tool_desc)
-            
+
             console.print(tools_table)
-    
+
     except Exception as e:
         console.print(f"[red]✗ Error getting extension info: {e}[/red]", err=True)
         sys.exit(1)
 
 
 @cli.command()
-@click.argument("shell", type=click.Choice(['bash', 'zsh', 'fish', 'powershell']))
+@click.argument("shell", type=click.Choice(["bash", "zsh", "fish", "powershell"]))
 def completion(shell: str) -> None:
     """Generate shell completion scripts."""
     install_shell_completion(shell)

@@ -94,7 +94,7 @@ class VMCPError(Exception):
     ) -> None:
         """
         Initialize vMCP error.
-        
+
         Args:
             code: Error code from VMCPErrorCode enum
             message: Human-readable error message
@@ -116,10 +116,10 @@ class VMCPError(Exception):
     def to_json_rpc_error(self, request_id: Any = None) -> dict[str, Any]:
         """
         Convert to JSON-RPC error response.
-        
+
         Args:
             request_id: Request ID to include in response
-            
+
         Returns:
             JSON-RPC error response dictionary
         """
@@ -129,8 +129,8 @@ class VMCPError(Exception):
             "error": {
                 "code": int(self.code),
                 "message": self.message,
-                "data": self.data
-            }
+                "data": self.data,
+            },
         }
 
     def __repr__(self) -> str:
@@ -140,6 +140,7 @@ class VMCPError(Exception):
 
 # Convenience error classes for specific error categories
 
+
 class TransportError(VMCPError):
     """Transport-related errors."""
 
@@ -147,12 +148,12 @@ class TransportError(VMCPError):
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.TRANSPORT_ERROR,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
 
-class ConnectionError(TransportError):
+class VMCPConnectionError(TransportError):
     """Connection-related transport errors."""
 
     def __init__(self, message: str, **kwargs: Any) -> None:
@@ -174,7 +175,7 @@ class RoutingError(VMCPError):
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.ROUTING_FAILED,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
@@ -187,10 +188,7 @@ class ServerNotFoundError(RoutingError):
         if method:
             message += f" for method '{method}'"
         super().__init__(
-            message,
-            VMCPErrorCode.NO_SERVER_FOUND,
-            server_id=server_id,
-            method=method
+            message, VMCPErrorCode.NO_SERVER_FOUND, server_id=server_id, method=method
         )
 
 
@@ -198,20 +196,14 @@ class ServerUnavailableError(RoutingError):
     """Server unavailable error."""
 
     def __init__(
-        self,
-        server_id: str,
-        reason: str | None = None,
-        **kwargs: Any
+        self, server_id: str, reason: str | None = None, **kwargs: Any
     ) -> None:
         message = f"Server '{server_id}' is unavailable"
         if reason:
             message += f": {reason}"
         kwargs["reason"] = reason
         super().__init__(
-            message,
-            VMCPErrorCode.SERVER_UNAVAILABLE,
-            server_id=server_id,
-            **kwargs
+            message, VMCPErrorCode.SERVER_UNAVAILABLE, server_id=server_id, **kwargs
         )
 
 
@@ -223,29 +215,30 @@ class CircuitBreakerOpenError(RoutingError):
         server_id: str,
         failure_count: int,
         last_failure_time: float | None = None,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
-        message = f"Circuit breaker open for server '{server_id}' (failures: {failure_count})"
-        kwargs.update({
-            "failure_count": failure_count,
-            "last_failure_time": last_failure_time,
-        })
+        message = (
+            f"Circuit breaker open for server '{server_id}' (failures: {failure_count})"
+        )
+        kwargs.update(
+            {
+                "failure_count": failure_count,
+                "last_failure_time": last_failure_time,
+            }
+        )
         super().__init__(
-            message,
-            VMCPErrorCode.CIRCUIT_BREAKER_OPEN,
-            server_id=server_id,
-            **kwargs
+            message, VMCPErrorCode.CIRCUIT_BREAKER_OPEN, server_id=server_id, **kwargs
         )
 
 
-class PermissionError(VMCPError):
+class VMCPPermissionError(VMCPError):
     """Permission-related errors."""
 
     def __init__(
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.UNAUTHORIZED,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
@@ -257,14 +250,16 @@ class PersonaNotFoundError(PermissionError):
         super().__init__(
             f"Persona '{persona_name}' not found",
             VMCPErrorCode.PERSONA_NOT_FOUND,
-            persona=persona_name
+            persona=persona_name,
         )
 
 
 class ServerNotAllowedError(PermissionError):
     """Server not allowed for persona error."""
 
-    def __init__(self, persona_name: str, server_id: str, method: str | None = None) -> None:
+    def __init__(
+        self, persona_name: str, server_id: str, method: str | None = None
+    ) -> None:
         message = f"Persona '{persona_name}' not allowed to access server '{server_id}'"
         if method:
             message += f" for method '{method}'"
@@ -273,7 +268,7 @@ class ServerNotAllowedError(PermissionError):
             VMCPErrorCode.SERVER_NOT_ALLOWED,
             persona=persona_name,
             server_id=server_id,
-            method=method
+            method=method,
         )
 
 
@@ -284,7 +279,7 @@ class ProtocolError(VMCPError):
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.PROTOCOL_ERROR,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
@@ -297,18 +292,20 @@ class UnsupportedVersionError(ProtocolError):
             f"Unsupported protocol version '{version}'. Supported: {', '.join(supported_versions)}",
             VMCPErrorCode.UNSUPPORTED_VERSION,
             version=version,
-            supported_versions=supported_versions
+            supported_versions=supported_versions,
         )
 
 
 class InvalidMessageError(ProtocolError):
     """Invalid message format error."""
 
-    def __init__(self, message: str, validation_errors: list[str] | None = None) -> None:
+    def __init__(
+        self, message: str, validation_errors: list[str] | None = None
+    ) -> None:
         super().__init__(
             f"Invalid message format: {message}",
             VMCPErrorCode.INVALID_MESSAGE,
-            validation_errors=validation_errors or []
+            validation_errors=validation_errors or [],
         )
 
 
@@ -340,7 +337,7 @@ class RepositoryError(VMCPError):
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.REPOSITORY_ERROR,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
@@ -356,7 +353,7 @@ class PackageNotFoundError(RepositoryError):
             message,
             VMCPErrorCode.PACKAGE_NOT_FOUND,
             package=package_name,
-            repository=repository
+            repository=repository,
         )
 
 
@@ -369,7 +366,7 @@ class InstallationFailedError(RepositoryError):
             VMCPErrorCode.INSTALLATION_FAILED,
             package=package_name,
             reason=reason,
-            **kwargs
+            **kwargs,
         )
 
 
@@ -377,11 +374,7 @@ class RateLimitExceededError(VMCPError):
     """Rate limit exceeded error."""
 
     def __init__(
-        self,
-        limit: int,
-        window: int,
-        retry_after: int | None = None,
-        **kwargs: Any
+        self, limit: int, window: int, retry_after: int | None = None, **kwargs: Any
     ) -> None:
         message = f"Rate limit exceeded: {limit} requests per {window}s"
         if retry_after:
@@ -389,12 +382,7 @@ class RateLimitExceededError(VMCPError):
         super().__init__(
             VMCPErrorCode.RATE_LIMIT_EXCEEDED,
             message,
-            {
-                "limit": limit,
-                "window": window,
-                "retry_after": retry_after,
-                **kwargs
-            }
+            {"limit": limit, "window": window, "retry_after": retry_after, **kwargs},
         )
 
 
@@ -405,7 +393,7 @@ class ExtensionError(VMCPError):
         self,
         message: str,
         code: VMCPErrorCode = VMCPErrorCode.EXTENSION_ERROR,
-        **kwargs: Any
+        **kwargs: Any,
     ) -> None:
         super().__init__(code, message, kwargs)
 
@@ -418,18 +406,20 @@ class ExtensionNotFoundError(ExtensionError):
             f"Extension '{extension_id}' not found",
             VMCPErrorCode.EXTENSION_NOT_FOUND,
             extension_id=extension_id,
-            **kwargs
+            **kwargs,
         )
 
 
-def error_from_json_rpc(error_dict: dict[str, Any], request_id: Any = None) -> VMCPError:
+def error_from_json_rpc(
+    error_dict: dict[str, Any], request_id: Any = None
+) -> VMCPError:
     """
     Create VMCPError from JSON-RPC error dictionary.
-    
+
     Args:
         error_dict: JSON-RPC error dictionary
         request_id: Associated request ID
-        
+
     Returns:
         VMCPError instance
     """
@@ -444,21 +434,16 @@ def error_from_json_rpc(error_dict: dict[str, Any], request_id: Any = None) -> V
         error_code = VMCPErrorCode.INTERNAL_ERROR
         data["original_code"] = code
 
-    return VMCPError(
-        code=error_code,
-        message=message,
-        data=data,
-        request_id=request_id
-    )
+    return VMCPError(code=error_code, message=message, data=data, request_id=request_id)
 
 
 def is_retryable_error(error: Exception) -> bool:
     """
     Check if an error is retryable.
-    
+
     Args:
         error: Exception to check
-        
+
     Returns:
         True if error is retryable, False otherwise
     """

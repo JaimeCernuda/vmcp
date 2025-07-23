@@ -6,6 +6,7 @@ health monitoring, lifecycle management, and dynamic server mounting/unmounting.
 """
 
 import asyncio
+import contextlib
 import json
 import logging
 import os
@@ -24,21 +25,28 @@ logger = logging.getLogger(__name__)
 
 class MCPServerConfig(BaseModel):
     """Configuration for an MCP server."""
+
     id: str = Field(..., description="Unique server identifier")
     name: str = Field(..., description="Human-readable server name")
     transport: str = Field(default="stdio", description="Transport type")
     command: str | None = Field(None, description="Command to execute")
     args: list[str] = Field(default_factory=list, description="Command arguments")
     url: str | None = Field(None, description="Server URL for HTTP/WebSocket")
-    environment: dict[str, str] = Field(default_factory=dict, description="Environment variables")
+    environment: dict[str, str] = Field(
+        default_factory=dict, description="Environment variables"
+    )
     capabilities: dict[str, list[dict[str, Any]]] = Field(
         default_factory=dict, description="Server capabilities"
     )
-    health_check_interval: int = Field(default=30, description="Health check interval in seconds")
+    health_check_interval: int = Field(
+        default=30, description="Health check interval in seconds"
+    )
     max_retries: int = Field(default=3, description="Maximum connection retries")
     timeout: int = Field(default=30, description="Request timeout in seconds")
     enabled: bool = Field(default=True, description="Whether server is enabled")
-    pool_config: dict[str, Any] | None = Field(None, description="Connection pool configuration")
+    pool_config: dict[str, Any] | None = Field(
+        None, description="Connection pool configuration"
+    )
 
     def get_pool_config(self) -> PoolConfig:
         """Get connection pool configuration."""
@@ -56,6 +64,7 @@ class MCPServerConfig(BaseModel):
 
 class MCPServerState(BaseModel):
     """Runtime state of an MCP server."""
+
     config: MCPServerConfig
     is_healthy: bool = False
     last_health_check: datetime | None = None
@@ -106,7 +115,7 @@ class Registry:
     def __init__(self, registry_path: str = "~/.vmcp/registry") -> None:
         """
         Initialize registry.
-        
+
         Args:
             registry_path: Path to registry configuration directory
         """
@@ -134,11 +143,13 @@ class Registry:
     async def load_servers(self) -> None:
         """Load server configurations from disk."""
         if not self._config_file.exists():
-            logger.info("No server configuration file found, starting with empty registry")
+            logger.info(
+                "No server configuration file found, starting with empty registry"
+            )
             return
 
         try:
-            with open(self._config_file, encoding='utf-8') as f:
+            with open(self._config_file, encoding="utf-8") as f:
                 config_data = json.load(f)
 
             servers_data = config_data.get("servers", [])
@@ -169,14 +180,12 @@ class Registry:
         try:
             config_data = {
                 "version": "1.0.0",
-                "servers": [
-                    state.config.dict() for state in self._servers.values()
-                ]
+                "servers": [state.config.dict() for state in self._servers.values()],
             }
 
             # Write to temporary file first
-            temp_file = self._config_file.with_suffix('.tmp')
-            with open(temp_file, 'w', encoding='utf-8') as f:
+            temp_file = self._config_file.with_suffix(".tmp")
+            with open(temp_file, "w", encoding="utf-8") as f:
                 json.dump(config_data, f, indent=2, default=str)
 
             # Atomic move
@@ -191,10 +200,10 @@ class Registry:
     async def register_server(self, config: MCPServerConfig) -> None:
         """
         Register a new MCP server.
-        
+
         Args:
             config: Server configuration
-            
+
         Raises:
             RegistryError: If server already exists or registration fails
         """
@@ -204,10 +213,14 @@ class Registry:
 
             # Validate configuration
             if config.transport == "stdio" and not config.command:
-                raise ConfigurationError(f"Server {config.id}: stdio transport requires command")
+                raise ConfigurationError(
+                    f"Server {config.id}: stdio transport requires command"
+                )
 
             if config.transport in ["http", "websocket"] and not config.url:
-                raise ConfigurationError(f"Server {config.id}: {config.transport} transport requires url")
+                raise ConfigurationError(
+                    f"Server {config.id}: {config.transport} transport requires url"
+                )
 
             # Create server state
             state = MCPServerState(config=config)
@@ -228,10 +241,10 @@ class Registry:
     async def unregister_server(self, server_id: str) -> None:
         """
         Unregister an MCP server.
-        
+
         Args:
             server_id: Server ID to unregister
-            
+
         Raises:
             ServerNotFoundError: If server not found
         """
@@ -248,18 +261,14 @@ class Registry:
         # Save configuration
         await self.save_config()
 
-    async def update_server_config(
-        self,
-        server_id: str,
-        **updates: Any
-    ) -> None:
+    async def update_server_config(self, server_id: str, **updates: Any) -> None:
         """
         Update server configuration.
-        
+
         Args:
             server_id: Server ID to update
             **updates: Configuration updates
-            
+
         Raises:
             ServerNotFoundError: If server not found
         """
@@ -308,25 +317,29 @@ class Registry:
     def get_healthy_servers(self) -> list[MCPServerState]:
         """Get all healthy enabled servers."""
         return [
-            state for state in self._servers.values()
+            state
+            for state in self._servers.values()
             if state.config.enabled and state.is_healthy
         ]
 
     def get_servers_by_capability(self, capability: str) -> list[MCPServerState]:
         """
         Get servers that support a specific capability.
-        
+
         Args:
             capability: Capability name (e.g., "tools", "resources")
-            
+
         Returns:
             List of servers supporting the capability
         """
         return [
-            state for state in self._servers.values()
-            if (state.config.enabled and
-                state.is_healthy and
-                capability in state.config.capabilities)
+            state
+            for state in self._servers.values()
+            if (
+                state.config.enabled
+                and state.is_healthy
+                and capability in state.config.capabilities
+            )
         ]
 
     async def get_connection_pool(self, server_id: str) -> ConnectionPool | None:
@@ -351,10 +364,8 @@ class Registry:
         """Stop health monitoring task."""
         if self._health_monitor_task:
             self._health_monitor_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._health_monitor_task
-            except asyncio.CancelledError:
-                pass
             self._health_monitor_task = None
             logger.info("Stopped health monitoring")
 
@@ -392,8 +403,7 @@ class Registry:
 
         # Check health in parallel
         tasks = [
-            self._check_server_health(state.config.id)
-            for state in enabled_servers
+            self._check_server_health(state.config.id) for state in enabled_servers
         ]
 
         results = await asyncio.gather(*tasks, return_exceptions=True)
@@ -415,12 +425,12 @@ class Registry:
             pool = await self._pool_manager.get_pool(
                 server_id,
                 lambda: self._create_server_connection(server_id),
-                state.config.get_pool_config()
+                state.config.get_pool_config(),
             )
 
             # Perform health check using connection pool
             async with pool.acquire(timeout=5.0) as connection:
-                if hasattr(connection, 'ping'):
+                if hasattr(connection, "ping"):
                     healthy = await connection.ping()
                 else:
                     # Fallback: assume healthy if connection exists
@@ -448,7 +458,7 @@ class Registry:
             await self._pool_manager.get_pool(
                 server_id,
                 lambda: self._create_server_connection(server_id),
-                state.config.get_pool_config()
+                state.config.get_pool_config(),
             )
             logger.debug(f"Initialized connection pool for {server_id}")
         except Exception as e:
@@ -526,15 +536,21 @@ class Registry:
             "config": state.config.dict(),
             "state": {
                 "is_healthy": state.is_healthy,
-                "last_health_check": state.last_health_check.isoformat() if state.last_health_check else None,
+                "last_health_check": state.last_health_check.isoformat()
+                if state.last_health_check
+                else None,
                 "connection_count": state.connection_count,
                 "total_requests": state.total_requests,
                 "failed_requests": state.failed_requests,
                 "error_rate": state.get_error_rate(),
                 "last_error": state.last_error,
-                "last_error_time": state.last_error_time.isoformat() if state.last_error_time else None,
+                "last_error_time": state.last_error_time.isoformat()
+                if state.last_error_time
+                else None,
                 "uptime": state.get_uptime(),
-                "uptime_start": state.uptime_start.isoformat() if state.uptime_start else None,
+                "uptime_start": state.uptime_start.isoformat()
+                if state.uptime_start
+                else None,
             },
             "pool_stats": pool_stats,
         }

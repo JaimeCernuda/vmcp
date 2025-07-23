@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RouteRule:
     """Routing rule for path-based routing."""
+
     pattern: str
     server_id: str
     priority: int = 0
@@ -38,13 +39,15 @@ class RouteRule:
             escaped = re.escape(self.pattern)
 
             # Convert glob wildcards to regex
-            regex_pattern = escaped.replace(r'\*', '.*').replace(r'\?', '.')
+            regex_pattern = escaped.replace(r"\*", ".*").replace(r"\?", ".")
 
             # Ensure full match
-            regex_pattern = f'^{regex_pattern}$'
+            regex_pattern = f"^{regex_pattern}$"
 
             self._regex = re.compile(regex_pattern, re.IGNORECASE)
-            logger.debug(f"Compiled route pattern '{self.pattern}' to regex: {regex_pattern}")
+            logger.debug(
+                f"Compiled route pattern '{self.pattern}' to regex: {regex_pattern}"
+            )
 
         except re.error as e:
             logger.error(f"Invalid route pattern '{self.pattern}': {e}")
@@ -53,10 +56,10 @@ class RouteRule:
     def matches(self, method: str) -> bool:
         """
         Check if method matches this rule.
-        
+
         Args:
             method: Method name to match
-            
+
         Returns:
             True if method matches pattern
         """
@@ -73,6 +76,7 @@ class RouteRule:
 @dataclass
 class ContentRule:
     """Rule for content-based routing."""
+
     server_id: str
     priority: int = 0
     method: str | None = None
@@ -91,8 +95,8 @@ class ContentRule:
             try:
                 # Convert glob pattern to regex
                 escaped = re.escape(self.resource_pattern)
-                regex_pattern = escaped.replace(r'\*', '.*').replace(r'\?', '.')
-                regex_pattern = f'^{regex_pattern}$'
+                regex_pattern = escaped.replace(r"\*", ".*").replace(r"\?", ".")
+                regex_pattern = f"^{regex_pattern}$"
                 self._resource_regex = re.compile(regex_pattern, re.IGNORECASE)
             except re.error as e:
                 logger.error(f"Invalid resource pattern '{self.resource_pattern}': {e}")
@@ -106,10 +110,10 @@ class RoutingAlgorithm(ABC):
     def route(self, request: dict[str, Any]) -> str | None:
         """
         Route request to server ID.
-        
+
         Args:
             request: JSON-RPC request
-            
+
         Returns:
             Server ID or None if no match
         """
@@ -141,10 +145,10 @@ class PathBasedRouter(RoutingAlgorithm):
     def route(self, request: dict[str, Any]) -> str | None:
         """
         Route request based on method path.
-        
+
         Args:
             request: JSON-RPC request
-            
+
         Returns:
             Server ID or None if no match
         """
@@ -156,12 +160,14 @@ class PathBasedRouter(RoutingAlgorithm):
         sorted_rules = sorted(
             [rule for rule in self.rules if rule.enabled],
             key=lambda r: r.priority,
-            reverse=True
+            reverse=True,
         )
 
         for rule in sorted_rules:
             if rule.matches(method):
-                logger.debug(f"Method '{method}' matched rule '{rule.pattern}' -> {rule.server_id}")
+                logger.debug(
+                    f"Method '{method}' matched rule '{rule.pattern}' -> {rule.server_id}"
+                )
                 return rule.server_id
 
         logger.debug(f"Method '{method}' did not match any path-based rules")
@@ -173,18 +179,18 @@ class PathBasedRouter(RoutingAlgorithm):
         server_id: str,
         priority: int = 0,
         method_filter: str | None = None,
-        description: str | None = None
+        description: str | None = None,
     ) -> RouteRule:
         """
         Add a routing rule.
-        
+
         Args:
             pattern: Glob pattern to match methods
             server_id: Target server ID
             priority: Rule priority (higher = checked first)
             method_filter: Optional method prefix filter
             description: Optional rule description
-            
+
         Returns:
             Created rule
         """
@@ -193,20 +199,22 @@ class PathBasedRouter(RoutingAlgorithm):
             server_id=server_id,
             priority=priority,
             method_filter=method_filter,
-            description=description
+            description=description,
         )
 
         self.rules.append(rule)
-        logger.info(f"Added path-based rule: '{pattern}' -> {server_id} (priority: {priority})")
+        logger.info(
+            f"Added path-based rule: '{pattern}' -> {server_id} (priority: {priority})"
+        )
         return rule
 
     def remove_rule(self, pattern: str) -> bool:
         """
         Remove a routing rule by pattern.
-        
+
         Args:
             pattern: Pattern to remove
-            
+
         Returns:
             True if rule was removed
         """
@@ -264,10 +272,10 @@ class ContentBasedRouter(RoutingAlgorithm):
     def route(self, request: dict[str, Any]) -> str | None:
         """
         Route request based on content.
-        
+
         Args:
             request: JSON-RPC request
-            
+
         Returns:
             Server ID or None if no match
         """
@@ -278,7 +286,7 @@ class ContentBasedRouter(RoutingAlgorithm):
         sorted_rules = sorted(
             [rule for rule in self.rules if rule.enabled],
             key=lambda r: r.priority,
-            reverse=True
+            reverse=True,
         )
 
         for rule in sorted_rules:
@@ -290,19 +298,16 @@ class ContentBasedRouter(RoutingAlgorithm):
         return None
 
     def _matches_rule(
-        self,
-        method: str,
-        params: dict[str, Any],
-        rule: ContentRule
+        self, method: str, params: dict[str, Any], rule: ContentRule
     ) -> bool:
         """
         Check if request matches rule.
-        
+
         Args:
             method: Request method
             params: Request parameters
             rule: Rule to check
-            
+
         Returns:
             True if request matches rule
         """
@@ -344,29 +349,31 @@ class ContentBasedRouter(RoutingAlgorithm):
     def add_rule(self, rule: ContentRule) -> None:
         """
         Add a content-based routing rule.
-        
+
         Args:
             rule: Content rule to add
         """
         self.rules.append(rule)
-        logger.info(f"Added content-based rule -> {rule.server_id} (priority: {rule.priority})")
+        logger.info(
+            f"Added content-based rule -> {rule.server_id} (priority: {rule.priority})"
+        )
 
     def add_tool_rule(
         self,
         tool_name: str,
         server_id: str,
         priority: int = 0,
-        description: str | None = None
+        description: str | None = None,
     ) -> ContentRule:
         """
         Add rule for specific tool.
-        
+
         Args:
             tool_name: Tool name to match
             server_id: Target server ID
             priority: Rule priority
             description: Optional description
-            
+
         Returns:
             Created rule
         """
@@ -375,7 +382,7 @@ class ContentBasedRouter(RoutingAlgorithm):
             priority=priority,
             method="tools/call",
             tool_name=tool_name,
-            description=description or f"Route tool '{tool_name}' to {server_id}"
+            description=description or f"Route tool '{tool_name}' to {server_id}",
         )
         self.add_rule(rule)
         return rule
@@ -385,17 +392,17 @@ class ContentBasedRouter(RoutingAlgorithm):
         resource_pattern: str,
         server_id: str,
         priority: int = 0,
-        description: str | None = None
+        description: str | None = None,
     ) -> ContentRule:
         """
         Add rule for resource pattern.
-        
+
         Args:
             resource_pattern: Resource URI pattern to match
             server_id: Target server ID
             priority: Rule priority
             description: Optional description
-            
+
         Returns:
             Created rule
         """
@@ -404,7 +411,8 @@ class ContentBasedRouter(RoutingAlgorithm):
             priority=priority,
             method="resources/read",
             resource_pattern=resource_pattern,
-            description=description or f"Route resource pattern '{resource_pattern}' to {server_id}"
+            description=description
+            or f"Route resource pattern '{resource_pattern}' to {server_id}",
         )
         self.add_rule(rule)
         return rule
@@ -414,17 +422,17 @@ class ContentBasedRouter(RoutingAlgorithm):
         prompt_name: str,
         server_id: str,
         priority: int = 0,
-        description: str | None = None
+        description: str | None = None,
     ) -> ContentRule:
         """
         Add rule for specific prompt.
-        
+
         Args:
             prompt_name: Prompt name to match
             server_id: Target server ID
             priority: Rule priority
             description: Optional description
-            
+
         Returns:
             Created rule
         """
@@ -433,7 +441,7 @@ class ContentBasedRouter(RoutingAlgorithm):
             priority=priority,
             method="prompts/get",
             prompt_name=prompt_name,
-            description=description or f"Route prompt '{prompt_name}' to {server_id}"
+            description=description or f"Route prompt '{prompt_name}' to {server_id}",
         )
         self.add_rule(rule)
         return rule
@@ -441,10 +449,10 @@ class ContentBasedRouter(RoutingAlgorithm):
     def remove_rule(self, rule_id: str) -> bool:
         """
         Remove rule by server ID and description match.
-        
+
         Args:
             rule_id: Rule identifier (server_id:description)
-            
+
         Returns:
             True if rule was removed
         """
@@ -453,7 +461,8 @@ class ContentBasedRouter(RoutingAlgorithm):
         if ":" in rule_id:
             server_id, description = rule_id.split(":", 1)
             self.rules = [
-                rule for rule in self.rules
+                rule
+                for rule in self.rules
                 if not (rule.server_id == server_id and rule.description == description)
             ]
         else:
@@ -491,7 +500,10 @@ class ContentBasedRouter(RoutingAlgorithm):
         """Enable a routing rule."""
         count = 0
         for rule in self.rules:
-            if rule.server_id == rule_id or f"{rule.server_id}:{rule.description}" == rule_id:
+            if (
+                rule.server_id == rule_id
+                or f"{rule.server_id}:{rule.description}" == rule_id
+            ):
                 rule.enabled = True
                 count += 1
 
@@ -504,7 +516,10 @@ class ContentBasedRouter(RoutingAlgorithm):
         """Disable a routing rule."""
         count = 0
         for rule in self.rules:
-            if rule.server_id == rule_id or f"{rule.server_id}:{rule.description}" == rule_id:
+            if (
+                rule.server_id == rule_id
+                or f"{rule.server_id}:{rule.description}" == rule_id
+            ):
                 rule.enabled = False
                 count += 1
 
@@ -525,10 +540,10 @@ class HybridRouter(RoutingAlgorithm):
     def route(self, request: dict[str, Any]) -> str | None:
         """
         Route using path-based first, then content-based.
-        
+
         Args:
             request: JSON-RPC request
-            
+
         Returns:
             Server ID or None if no match
         """
@@ -578,24 +593,22 @@ class CapabilityRouter:
     def __init__(self, registry) -> None:
         """
         Initialize capability router.
-        
+
         Args:
             registry: Server registry
         """
         self.registry = registry
 
     def route_by_capability(
-        self,
-        request: dict[str, Any],
-        required_capability: str
+        self, request: dict[str, Any], required_capability: str
     ) -> str | None:
         """
         Route request to server with required capability.
-        
+
         Args:
             request: JSON-RPC request
             required_capability: Required capability (e.g., "tools", "resources")
-            
+
         Returns:
             Server ID or None if no capable server found
         """
@@ -617,10 +630,10 @@ class CapabilityRouter:
     def get_method_capability(self, method: str) -> str | None:
         """
         Determine required capability for method.
-        
+
         Args:
             method: JSON-RPC method
-            
+
         Returns:
             Required capability or None
         """

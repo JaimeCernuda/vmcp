@@ -26,7 +26,7 @@ class MCPInstaller:
     def __init__(self, install_dir: str | None = None):
         """
         Initialize MCP installer.
-        
+
         Args:
             install_dir: Directory for installing servers
         """
@@ -46,15 +46,17 @@ class MCPInstaller:
 
         # Verify UV is available
         if not await self._verify_uv():
-            raise InstallationFailedError("UV package manager not found. Please install UV.")
+            raise InstallationFailedError(
+                "UV package manager not found. Please install UV."
+            )
 
     async def install_server(self, server_info: MCPServerInfo) -> str:
         """
         Install an MCP server.
-        
+
         Args:
             server_info: Server information
-            
+
         Returns:
             Installation path
         """
@@ -80,7 +82,9 @@ class MCPInstaller:
             elif server_info.source_type == "pypi":
                 await self._install_pypi(server_info, install_path)
             else:
-                raise InstallationFailedError(f"Unsupported source type: {server_info.source_type}")
+                raise InstallationFailedError(
+                    f"Unsupported source type: {server_info.source_type}"
+                )
 
             # Record installation
             self._record_installation(server_id, server_info, str(install_path))
@@ -97,10 +101,10 @@ class MCPInstaller:
     async def update_server(self, server_info: MCPServerInfo) -> str:
         """
         Update an installed MCP server.
-        
+
         Args:
             server_info: Server information
-            
+
         Returns:
             Installation path
         """
@@ -121,10 +125,14 @@ class MCPInstaller:
             elif server_info.source_type == "pypi":
                 await self._update_pypi(server_info, install_path)
             else:
-                raise InstallationFailedError(f"Unsupported source type: {server_info.source_type}")
+                raise InstallationFailedError(
+                    f"Unsupported source type: {server_info.source_type}"
+                )
 
             # Update installation record
-            self._record_installation(server_id, server_info, str(install_path), is_update=True)
+            self._record_installation(
+                server_id, server_info, str(install_path), is_update=True
+            )
 
             logger.info(f"Successfully updated {server_id}")
             return str(install_path)
@@ -135,10 +143,10 @@ class MCPInstaller:
     async def uninstall_server(self, server_id: str) -> bool:
         """
         Uninstall an MCP server.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             True if successful
         """
@@ -170,19 +178,21 @@ class MCPInstaller:
     async def is_installed(self, server_id: str) -> bool:
         """
         Check if a server is installed.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             True if installed
         """
-        return server_id in self.installations and (self.install_dir / server_id).exists()
+        return (
+            server_id in self.installations and (self.install_dir / server_id).exists()
+        )
 
     async def list_installed(self) -> dict[str, dict[str, Any]]:
         """
         List all installed servers.
-        
+
         Returns:
             Dictionary of installed servers and their metadata
         """
@@ -206,10 +216,10 @@ class MCPInstaller:
     async def verify_installation(self, server_id: str) -> dict[str, Any]:
         """
         Verify an installation and return status.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             Verification results
         """
@@ -218,7 +228,7 @@ class MCPInstaller:
                 "status": "not_installed",
                 "installed": False,
                 "executable": False,
-                "dependencies": False
+                "dependencies": False,
             }
 
         install_path = self.install_dir / server_id
@@ -228,13 +238,21 @@ class MCPInstaller:
             "status": "installed",
             "installed": True,
             "path": str(install_path),
-            "metadata": metadata
+            "metadata": metadata,
         }
 
         # Check if executable exists
         try:
             # Try to run the server with --help to verify it's working
-            cmd = ["uv", "run", "--directory", str(install_path), "python", "-c", "import sys; print('OK')"]
+            cmd = [
+                "uv",
+                "run",
+                "--directory",
+                str(install_path),
+                "python",
+                "-c",
+                "import sys; print('OK')",
+            ]
             result = await self._run_command(cmd, timeout=10)
             results["executable"] = result.returncode == 0
 
@@ -264,7 +282,7 @@ class MCPInstaller:
     def get_install_stats(self) -> dict[str, Any]:
         """
         Get installation statistics.
-        
+
         Returns:
             Installation statistics
         """
@@ -286,10 +304,14 @@ class MCPInstaller:
             "source_types": source_types,
             "install_directory": str(self.install_dir),
             "disk_usage": self._calculate_disk_usage(),
-            "recent_installations": len([d for d in install_dates if self._is_recent(d)])
+            "recent_installations": len(
+                [d for d in install_dates if self._is_recent(d)]
+            ),
         }
 
-    async def _install_local(self, server_info: MCPServerInfo, install_path: Path) -> None:
+    async def _install_local(
+        self, server_info: MCPServerInfo, install_path: Path
+    ) -> None:
         """Install from local directory."""
         source_path = Path(server_info.source_location)
 
@@ -306,7 +328,9 @@ class MCPInstaller:
         # Install dependencies using UV
         await self._install_dependencies(install_path)
 
-    async def _install_git(self, server_info: MCPServerInfo, install_path: Path) -> None:
+    async def _install_git(
+        self, server_info: MCPServerInfo, install_path: Path
+    ) -> None:
         """Install from Git repository."""
         import git
 
@@ -321,7 +345,9 @@ class MCPInstaller:
         # Install dependencies
         await self._install_dependencies(install_path)
 
-    async def _install_pypi(self, server_info: MCPServerInfo, install_path: Path) -> None:
+    async def _install_pypi(
+        self, server_info: MCPServerInfo, install_path: Path
+    ) -> None:
         """Install from PyPI."""
         # Create a basic project structure
         install_path.mkdir(exist_ok=True)
@@ -343,7 +369,9 @@ build-backend = "setuptools.build_meta"
         # Install dependencies
         await self._install_dependencies(install_path)
 
-    async def _update_local(self, server_info: MCPServerInfo, install_path: Path) -> None:
+    async def _update_local(
+        self, server_info: MCPServerInfo, install_path: Path
+    ) -> None:
         """Update local installation."""
         # For local installations, copy updated source
         await self._install_local(server_info, install_path)
@@ -364,7 +392,9 @@ build-backend = "setuptools.build_meta"
         # Reinstall dependencies
         await self._install_dependencies(install_path)
 
-    async def _update_pypi(self, server_info: MCPServerInfo, install_path: Path) -> None:
+    async def _update_pypi(
+        self, server_info: MCPServerInfo, install_path: Path
+    ) -> None:
         """Update PyPI installation."""
         # For PyPI packages, reinstall with latest version
         await self._install_pypi(server_info, install_path)
@@ -383,7 +413,9 @@ build-backend = "setuptools.build_meta"
         result = await self._run_command(cmd, timeout=300)  # 5 minute timeout
 
         if result.returncode != 0:
-            raise InstallationFailedError(f"Dependency installation failed: {result.stderr}")
+            raise InstallationFailedError(
+                f"Dependency installation failed: {result.stderr}"
+            )
 
     async def _verify_uv(self) -> bool:
         """Verify UV is available."""
@@ -394,10 +426,7 @@ build-backend = "setuptools.build_meta"
             return False
 
     async def _run_command(
-        self,
-        cmd: list[str],
-        timeout: int = 30,
-        cwd: str | None = None
+        self, cmd: list[str], timeout: int = 30, cwd: str | None = None
     ) -> subprocess.CompletedProcess:
         """Run a command asynchronously."""
         logger.debug(f"Running command: {' '.join(cmd)}")
@@ -406,17 +435,19 @@ build-backend = "setuptools.build_meta"
             *cmd,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
-            cwd=cwd
+            cwd=cwd,
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(process.communicate(), timeout=timeout)
+            stdout, stderr = await asyncio.wait_for(
+                process.communicate(), timeout=timeout
+            )
 
             return subprocess.CompletedProcess(
                 args=cmd,
                 returncode=process.returncode,
                 stdout=stdout.decode() if stdout else "",
-                stderr=stderr.decode() if stderr else ""
+                stderr=stderr.decode() if stderr else "",
             )
 
         except asyncio.TimeoutError:
@@ -429,7 +460,7 @@ build-backend = "setuptools.build_meta"
         server_id: str,
         server_info: MCPServerInfo,
         install_path: str,
-        is_update: bool = False
+        is_update: bool = False,
     ) -> None:
         """Record installation metadata."""
         now = datetime.now().isoformat()
@@ -442,10 +473,12 @@ build-backend = "setuptools.build_meta"
             "source_type": server_info.source_type,
             "source_location": server_info.source_location,
             "path": install_path,
-            "install_date": self.installations.get(server_id, {}).get("install_date", now),
+            "install_date": self.installations.get(server_id, {}).get(
+                "install_date", now
+            ),
             "update_date": now if is_update else now,
             "entry_point": server_info.entry_point,
-            "capabilities": server_info.capabilities
+            "capabilities": server_info.capabilities,
         }
 
         self.installations[server_id] = metadata
@@ -466,7 +499,7 @@ build-backend = "setuptools.build_meta"
     def _save_metadata(self) -> None:
         """Save installation metadata."""
         try:
-            with open(self.metadata_file, 'w') as f:
+            with open(self.metadata_file, "w") as f:
                 json.dump(self.installations, f, indent=2)
         except Exception as e:
             logger.error(f"Failed to save installation metadata: {e}")

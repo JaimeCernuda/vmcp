@@ -24,11 +24,11 @@ class RepositoryManager:
         self,
         registry: Registry,
         cache_dir: str | None = None,
-        install_dir: str | None = None
+        install_dir: str | None = None,
     ):
         """
         Initialize repository manager.
-        
+
         Args:
             registry: vMCP server registry
             cache_dir: Directory for caching repository data
@@ -41,7 +41,7 @@ class RepositoryManager:
         # Repository configuration
         self.repositories: dict[str, str] = {
             "iowarp-mcps": "https://github.com/iowarp/iowarp-mcps.git",
-            "official-mcps": "https://github.com/modelcontextprotocol/servers.git"
+            "official-mcps": "https://github.com/modelcontextprotocol/servers.git",
         }
 
     async def initialize(self) -> None:
@@ -55,17 +55,15 @@ class RepositoryManager:
         await self.discover_servers()
 
     async def discover_servers(
-        self,
-        sources: list[str] | None = None,
-        refresh: bool = False
+        self, sources: list[str] | None = None, refresh: bool = False
     ) -> dict[str, MCPServerInfo]:
         """
         Discover MCP servers from configured sources.
-        
+
         Args:
             sources: Custom sources to discover from
             refresh: Whether to refresh cached results
-            
+
         Returns:
             Dictionary of discovered servers
         """
@@ -79,17 +77,17 @@ class RepositoryManager:
         query: str = "",
         tags: list[str] | None = None,
         capabilities: list[str] | None = None,
-        installed_only: bool = False
+        installed_only: bool = False,
     ) -> list[dict[str, Any]]:
         """
         Search for MCP servers.
-        
+
         Args:
             query: Search query
             tags: Required tags
-            capabilities: Required capabilities  
+            capabilities: Required capabilities
             installed_only: Only return installed servers
-            
+
         Returns:
             List of server information with installation status
         """
@@ -118,19 +116,16 @@ class RepositoryManager:
         return results
 
     async def install_server(
-        self,
-        server_id: str,
-        register: bool = True,
-        enable: bool = True
+        self, server_id: str, register: bool = True, enable: bool = True
     ) -> bool:
         """
         Install and optionally register an MCP server.
-        
+
         Args:
             server_id: Server identifier
             register: Whether to register with vMCP registry
             enable: Whether to enable the server
-            
+
         Returns:
             True if successful
         """
@@ -156,18 +151,14 @@ class RepositoryManager:
             logger.error(f"Failed to install {server_id}: {e}")
             raise RepositoryError(f"Installation failed: {e}")
 
-    async def uninstall_server(
-        self,
-        server_id: str,
-        unregister: bool = True
-    ) -> bool:
+    async def uninstall_server(self, server_id: str, unregister: bool = True) -> bool:
         """
         Uninstall and optionally unregister an MCP server.
-        
+
         Args:
             server_id: Server identifier
             unregister: Whether to unregister from vMCP registry
-            
+
         Returns:
             True if successful
         """
@@ -191,10 +182,10 @@ class RepositoryManager:
     async def update_server(self, server_id: str) -> bool:
         """
         Update an installed MCP server.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             True if successful
         """
@@ -223,7 +214,7 @@ class RepositoryManager:
                     transport=server_config.config.transport,
                     command=self._generate_command(server_info, install_path),
                     capabilities=server_info.capabilities,
-                    enabled=server_config.config.enabled
+                    enabled=server_config.config.enabled,
                 )
                 await self.registry.update_server(server_id, new_config)
 
@@ -237,7 +228,7 @@ class RepositoryManager:
     async def list_installed(self) -> list[dict[str, Any]]:
         """
         List all installed MCP servers.
-        
+
         Returns:
             List of installed server information
         """
@@ -257,24 +248,28 @@ class RepositoryManager:
                 "registered": is_registered,
                 "install_path": install_info.get("path"),
                 "install_date": install_info.get("date"),
-                "version": install_info.get("version")
+                "version": install_info.get("version"),
             }
 
             # Add discovery info if available
             if server_info:
-                result.update({
-                    "name": server_info.name,
-                    "description": server_info.description,
-                    "capabilities": server_info.capabilities,
-                    "source_type": server_info.source_type
-                })
+                result.update(
+                    {
+                        "name": server_info.name,
+                        "description": server_info.description,
+                        "capabilities": server_info.capabilities,
+                        "source_type": server_info.source_type,
+                    }
+                )
             else:
-                result.update({
-                    "name": server_id,
-                    "description": "Installed server (no discovery info)",
-                    "capabilities": {},
-                    "source_type": "unknown"
-                })
+                result.update(
+                    {
+                        "name": server_id,
+                        "description": "Installed server (no discovery info)",
+                        "capabilities": {},
+                        "source_type": "unknown",
+                    }
+                )
 
             results.append(result)
 
@@ -283,10 +278,10 @@ class RepositoryManager:
     async def auto_register_iowarp_mcps(self, mcps_directory: str) -> int:
         """
         Automatically discover and register iowarp-mcps servers.
-        
+
         Args:
             mcps_directory: Path to iowarp-mcps directory
-            
+
         Returns:
             Number of servers registered
         """
@@ -311,7 +306,7 @@ class RepositoryManager:
                     command=self._generate_iowarp_command(server_info),
                     args=self._generate_iowarp_args(server_info),
                     capabilities=self._format_capabilities(server_info.capabilities),
-                    enabled=True
+                    enabled=True,
                 )
 
                 # Register with vMCP
@@ -329,7 +324,7 @@ class RepositoryManager:
     async def sync_repositories(self) -> dict[str, int]:
         """
         Sync all configured repositories.
-        
+
         Returns:
             Dictionary of repository sync results
         """
@@ -359,7 +354,7 @@ class RepositoryManager:
     def get_repository_stats(self) -> dict[str, Any]:
         """
         Get repository management statistics.
-        
+
         Returns:
             Repository statistics
         """
@@ -376,14 +371,11 @@ class RepositoryManager:
             "discovery": discovery_stats,
             "installation": installer_stats,
             "registry": registry_stats,
-            "repositories": list(self.repositories.keys())
+            "repositories": list(self.repositories.keys()),
         }
 
     async def _register_installed_server(
-        self,
-        server_info: MCPServerInfo,
-        install_path: str,
-        enable: bool = True
+        self, server_info: MCPServerInfo, install_path: str, enable: bool = True
     ) -> None:
         """Register an installed server with the vMCP registry."""
         # Generate args based on server info
@@ -400,7 +392,7 @@ class RepositoryManager:
             command=self._generate_command(server_info, install_path),
             args=args,
             capabilities=self._format_capabilities(server_info.capabilities),
-            enabled=enable
+            enabled=enable,
         )
 
         await self.registry.register_server(server_config)
@@ -423,7 +415,7 @@ class RepositoryManager:
         # Map server IDs to their actual directory names and paths
         server_path_map = {
             "parquet-mcp": "parquet",
-            "node-hardware-mcp": "Node_Hardware", 
+            "node-hardware-mcp": "Node_Hardware",
             "arxiv-mcp": "Arxiv",
             "slurm-mcp": "Slurm",
             "plot-mcp": "Plot",
@@ -435,16 +427,18 @@ class RepositoryManager:
             "darshan-mcp": "Darshan",
             "hdf5-mcp": "HDF5",
             "adios-mcp": "Adios",
-            "jarvis-mcp": "Jarvis"
+            "jarvis-mcp": "Jarvis",
         }
-        
+
         server_dir = server_path_map.get(server_info.id, server_info.id)
         server_path = f"iowarp-mcps/mcps/{server_dir}"
-        
+
         # Use the entry point if available, otherwise use module execution
         return ["run", "--directory", server_path, server_info.id]
 
-    def _format_capabilities(self, capabilities: dict[str, Any]) -> dict[str, list[dict[str, Any]]]:
+    def _format_capabilities(
+        self, capabilities: dict[str, Any]
+    ) -> dict[str, list[dict[str, Any]]]:
         """Format capabilities for MCPServerConfig."""
         formatted = {}
         for cap_type, cap_data in capabilities.items():

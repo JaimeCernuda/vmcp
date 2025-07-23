@@ -20,13 +20,11 @@ class Transport(ABC):
     """Abstract base class for vMCP transports."""
 
     def __init__(
-        self,
-        message_handler: Callable[[dict[str, Any]], Any],
-        name: str = "unknown"
+        self, message_handler: Callable[[dict[str, Any]], Any], name: str = "unknown"
     ) -> None:
         """
         Initialize transport.
-        
+
         Args:
             message_handler: Function to handle incoming messages
             name: Transport name for logging
@@ -47,7 +45,7 @@ class Transport(ABC):
     async def start(self) -> None:
         """
         Start the transport.
-        
+
         Raises:
             TransportError: If transport fails to start
         """
@@ -59,14 +57,16 @@ class Transport(ABC):
         pass
 
     @abstractmethod
-    async def send_message(self, message: dict[str, Any], connection_id: str | None = None) -> None:
+    async def send_message(
+        self, message: dict[str, Any], connection_id: str | None = None
+    ) -> None:
         """
         Send a message through the transport.
-        
+
         Args:
             message: Message to send
             connection_id: Optional connection identifier
-            
+
         Raises:
             TransportError: If message cannot be sent
         """
@@ -102,13 +102,15 @@ class Transport(ABC):
         """Record new connection."""
         self._stats["connections"] += 1
 
-    async def _handle_message_safe(self, message: dict[str, Any]) -> dict[str, Any] | None:
+    async def _handle_message_safe(
+        self, message: dict[str, Any]
+    ) -> dict[str, Any] | None:
         """
         Safely handle message with error catching.
-        
+
         Args:
             message: Message to handle
-            
+
         Returns:
             Response message or None
         """
@@ -116,7 +118,9 @@ class Transport(ABC):
             response = await self.message_handler(message)
             return response
         except Exception as e:
-            logger.error(f"Error handling message in {self.name} transport: {e}", exc_info=True)
+            logger.error(
+                f"Error handling message in {self.name} transport: {e}", exc_info=True
+            )
             self._record_error()
 
             # Create error response if message has ID
@@ -127,8 +131,8 @@ class Transport(ABC):
                     "error": {
                         "code": -32603,
                         "message": "Internal error",
-                        "data": {"transport": self.name}
-                    }
+                        "data": {"transport": self.name},
+                    },
                 }
             return None
 
@@ -144,7 +148,7 @@ class ConnectionManager:
     async def add_connection(self, connection_id: str, connection: Any) -> None:
         """
         Add a new connection.
-        
+
         Args:
             connection_id: Unique connection identifier
             connection: Connection object
@@ -156,10 +160,10 @@ class ConnectionManager:
     async def remove_connection(self, connection_id: str) -> Any | None:
         """
         Remove a connection.
-        
+
         Args:
             connection_id: Connection identifier to remove
-            
+
         Returns:
             Removed connection object or None if not found
         """
@@ -172,10 +176,10 @@ class ConnectionManager:
     async def get_connection(self, connection_id: str) -> Any | None:
         """
         Get a connection by ID.
-        
+
         Args:
             connection_id: Connection identifier
-            
+
         Returns:
             Connection object or None if not found
         """
@@ -192,9 +196,9 @@ class ConnectionManager:
         async with self._lock:
             for connection_id, connection in list(self.connections.items()):
                 try:
-                    if hasattr(connection, 'close'):
+                    if hasattr(connection, "close"):
                         await connection.close()
-                    elif hasattr(connection, 'disconnect'):
+                    elif hasattr(connection, "disconnect"):
                         await connection.disconnect()
                 except Exception as e:
                     logger.warning(f"Error closing connection {connection_id}: {e}")
@@ -218,14 +222,14 @@ class MessageFraming:
     def frame_message(message: str) -> bytes:
         """
         Frame a message for transmission using length prefix.
-        
+
         Args:
             message: Message string to frame
-            
+
         Returns:
             Framed message bytes
         """
-        content = message.encode('utf-8')
+        content = message.encode("utf-8")
         length = len(content)
         return f"{length}\n".encode() + content + b"\n"
 
@@ -233,27 +237,27 @@ class MessageFraming:
     def frame_message_fastmcp(message: str) -> bytes:
         """
         Frame a message for FastMCP (newline-delimited JSON).
-        
+
         Args:
             message: Message string to frame
-            
+
         Returns:
             Framed message bytes
         """
-        return message.encode('utf-8') + b"\n"
+        return message.encode("utf-8") + b"\n"
 
     @staticmethod
     def frame_message_http(message: str) -> bytes:
         """
         Frame a message using HTTP-style Content-Length header.
-        
+
         Args:
             message: Message string to frame
-            
+
         Returns:
             Framed message bytes
         """
-        content = message.encode('utf-8')
+        content = message.encode("utf-8")
         length = len(content)
         return f"Content-Length: {length}\r\n\r\n".encode() + content
 
@@ -262,13 +266,13 @@ class MessageFraming:
         """
         Read a framed message from stream reader.
         Supports both length-prefixed and FastMCP newline-delimited formats.
-        
+
         Args:
             reader: Stream reader
-            
+
         Returns:
             Message string or None if stream ended
-            
+
         Raises:
             TransportError: If framing is invalid
         """
@@ -278,13 +282,13 @@ class MessageFraming:
             if not first_line:
                 return None
 
-            first_line_str = first_line.decode('utf-8').strip()
-            
+            first_line_str = first_line.decode("utf-8").strip()
+
             # Check if it's a length prefix (integer) or direct JSON
             try:
                 length = int(first_line_str)
                 # It's a length prefix - use original framing
-                
+
                 # Validate length
                 if length < 0 or length > 10 * 1024 * 1024:  # 10MB limit
                     raise TransportError(f"Invalid message length: {length}")
@@ -295,16 +299,18 @@ class MessageFraming:
                 # Read trailing newline
                 await reader.readline()
 
-                return content.decode('utf-8')
-                
+                return content.decode("utf-8")
+
             except ValueError:
                 # Not a length prefix - assume it's FastMCP format (direct JSON)
-                if first_line_str.startswith('{') and first_line_str.endswith('}'):
+                if first_line_str.startswith("{") and first_line_str.endswith("}"):
                     # It's a complete JSON message
                     return first_line_str
                 else:
                     # Invalid format
-                    raise TransportError(f"Invalid message format: {first_line_str[:100]}...")
+                    raise TransportError(
+                        f"Invalid message format: {first_line_str[:100]}..."
+                    )
 
         except asyncio.IncompleteReadError as e:
             raise TransportError(f"Incomplete message: {e}") from e
@@ -315,13 +321,13 @@ class MessageFraming:
     async def read_http_framed_message(reader: asyncio.StreamReader) -> str | None:
         """
         Read an HTTP-style framed message from stream reader.
-        
+
         Args:
             reader: Stream reader
-            
+
         Returns:
             Message string or None if stream ended
-            
+
         Raises:
             TransportError: If framing is invalid
         """
@@ -333,16 +339,16 @@ class MessageFraming:
                 if not line:
                     return None
 
-                line = line.decode('utf-8').strip()
+                line = line.decode("utf-8").strip()
                 if not line:  # Empty line indicates end of headers
                     break
 
-                if ':' in line:
-                    key, value = line.split(':', 1)
+                if ":" in line:
+                    key, value = line.split(":", 1)
                     headers[key.strip().lower()] = value.strip()
 
             # Get content length
-            content_length = headers.get('content-length')
+            content_length = headers.get("content-length")
             if not content_length:
                 raise TransportError("Missing Content-Length header")
 
@@ -358,7 +364,7 @@ class MessageFraming:
             # Read message content
             content = await reader.readexactly(length)
 
-            return content.decode('utf-8')
+            return content.decode("utf-8")
 
         except asyncio.IncompleteReadError as e:
             raise TransportError(f"Incomplete HTTP message: {e}") from e

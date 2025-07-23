@@ -9,4 +9,4 @@ from .discovery import MCPDiscovery
 from .installer import MCPInstaller
 from .manager import RepositoryManager
 
-__all__ = ['RepositoryManager', 'MCPDiscovery', 'MCPInstaller']
+__all__ = ["RepositoryManager", "MCPDiscovery", "MCPInstaller"]

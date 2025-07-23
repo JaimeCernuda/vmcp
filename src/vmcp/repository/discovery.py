@@ -24,6 +24,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MCPServerInfo:
     """Information about a discovered MCP server."""
+
     id: str
     name: str
     description: str
@@ -57,7 +58,7 @@ class MCPServerInfo:
             "homepage_url": self.homepage_url,
             "tags": self.tags,
             "install_command": self.install_command,
-            "test_command": self.test_command
+            "test_command": self.test_command,
         }
 
 
@@ -67,7 +68,7 @@ class MCPDiscovery:
     def __init__(self, cache_dir: str | None = None):
         """
         Initialize MCP discovery system.
-        
+
         Args:
             cache_dir: Directory for caching discovery results
         """
@@ -76,17 +77,15 @@ class MCPDiscovery:
         self.discovered_servers: dict[str, MCPServerInfo] = {}
 
     async def discover_all(
-        self,
-        sources: list[str] | None = None,
-        refresh_cache: bool = False
+        self, sources: list[str] | None = None, refresh_cache: bool = False
     ) -> dict[str, MCPServerInfo]:
         """
         Discover MCP servers from all configured sources.
-        
+
         Args:
             sources: List of source paths/URLs to scan
             refresh_cache: Whether to refresh cached results
-            
+
         Returns:
             Dictionary of discovered servers by ID
         """
@@ -126,16 +125,20 @@ class MCPDiscovery:
         # Cache results
         self._save_cache(self.discovered_servers)
 
-        logger.info(f"Discovery complete: found {len(self.discovered_servers)} MCP servers")
+        logger.info(
+            f"Discovery complete: found {len(self.discovered_servers)} MCP servers"
+        )
         return self.discovered_servers
 
-    async def discover_local_directory(self, directory: str) -> dict[str, MCPServerInfo]:
+    async def discover_local_directory(
+        self, directory: str
+    ) -> dict[str, MCPServerInfo]:
         """
         Discover MCP servers in a local directory.
-        
+
         Args:
             directory: Path to directory to scan
-            
+
         Returns:
             Dictionary of discovered servers
         """
@@ -164,10 +167,10 @@ class MCPDiscovery:
     async def discover_git_repository(self, repo_url: str) -> dict[str, MCPServerInfo]:
         """
         Discover MCP servers in a Git repository.
-        
+
         Args:
             repo_url: Git repository URL
-            
+
         Returns:
             Dictionary of discovered servers
         """
@@ -198,10 +201,10 @@ class MCPDiscovery:
     async def _scan_iowarp_mcps(self, mcps_dir: Path) -> dict[str, MCPServerInfo]:
         """
         Scan iowarp-mcps directory structure.
-        
+
         Args:
             mcps_dir: Path to mcps directory
-            
+
         Returns:
             Dictionary of discovered servers
         """
@@ -244,10 +247,10 @@ class MCPDiscovery:
     async def _analyze_pyproject(self, pyproject_file: Path) -> MCPServerInfo | None:
         """
         Analyze a pyproject.toml file to extract MCP server information.
-        
+
         Args:
             pyproject_file: Path to pyproject.toml file
-            
+
         Returns:
             MCPServerInfo if valid MCP server found, None otherwise
         """
@@ -304,10 +307,14 @@ class MCPDiscovery:
                 source_location=str(pyproject_file.parent),
                 dependencies=dependencies,
                 homepage_url=self._extract_url(project.get("urls", {}), "homepage"),
-                documentation_url=self._extract_url(project.get("urls", {}), "documentation"),
+                documentation_url=self._extract_url(
+                    project.get("urls", {}), "documentation"
+                ),
                 tags=self._extract_tags(project),
                 install_command=f"uv pip install -e {pyproject_file.parent}",
-                test_command="uv run pytest" if (pyproject_file.parent / "tests").exists() else None
+                test_command="uv run pytest"
+                if (pyproject_file.parent / "tests").exists()
+                else None,
             )
 
             return server_info
@@ -319,10 +326,10 @@ class MCPDiscovery:
     async def _analyze_capabilities(self, server_dir: Path) -> dict[str, Any]:
         """
         Analyze server directory to determine capabilities.
-        
+
         Args:
             server_dir: Path to server directory
-            
+
         Returns:
             Dictionary of capabilities
         """
@@ -348,10 +355,15 @@ class MCPDiscovery:
 
                     # Try to determine capability type from filename
                     filename = py_file.stem
-                    if any(keyword in filename.lower() for keyword in ["tool", "handler"]):
+                    if any(
+                        keyword in filename.lower() for keyword in ["tool", "handler"]
+                    ):
                         capabilities["tools"] = {"list_changed": True}
                     elif "resource" in filename.lower():
-                        capabilities["resources"] = {"subscribe": True, "list_changed": True}
+                        capabilities["resources"] = {
+                            "subscribe": True,
+                            "list_changed": True,
+                        }
                     elif "prompt" in filename.lower():
                         capabilities["prompts"] = {"list_changed": True}
 
@@ -363,7 +375,10 @@ class MCPDiscovery:
                     if "tools" in content and "list_tools" in content:
                         capabilities["tools"] = {"list_changed": True}
                     if "resources" in content and "list_resources" in content:
-                        capabilities["resources"] = {"subscribe": True, "list_changed": True}
+                        capabilities["resources"] = {
+                            "subscribe": True,
+                            "list_changed": True,
+                        }
                     if "prompts" in content and "list_prompts" in content:
                         capabilities["prompts"] = {"list_changed": True}
                 except Exception:
@@ -461,11 +476,10 @@ class MCPDiscovery:
 
         try:
             data = {
-                server_id: server.to_dict()
-                for server_id, server in servers.items()
+                server_id: server.to_dict() for server_id, server in servers.items()
             }
 
-            with open(cache_file, 'w') as f:
+            with open(cache_file, "w") as f:
                 json.dump(data, f, indent=2)
 
             logger.debug(f"Saved {len(servers)} servers to cache")
@@ -477,16 +491,16 @@ class MCPDiscovery:
         self,
         query: str,
         tags: list[str] | None = None,
-        capabilities: list[str] | None = None
+        capabilities: list[str] | None = None,
     ) -> list[MCPServerInfo]:
         """
         Search discovered MCP servers.
-        
+
         Args:
             query: Search query string
             tags: Required tags
             capabilities: Required capabilities
-            
+
         Returns:
             List of matching servers
         """
@@ -499,24 +513,25 @@ class MCPDiscovery:
         for server in self.discovered_servers.values():
             # Text matching
             text_match = (
-                query_lower in server.name.lower() or
-                query_lower in server.description.lower() or
-                query_lower in server.id.lower() or
-                any(query_lower in tag.lower() for tag in server.tags)
+                query_lower in server.name.lower()
+                or query_lower in server.description.lower()
+                or query_lower in server.id.lower()
+                or any(query_lower in tag.lower() for tag in server.tags)
             )
 
             if not text_match and query.strip():
                 continue
 
             # Tag filtering
-            if tags:
-                if not all(tag.lower() in [t.lower() for t in server.tags] for tag in tags):
-                    continue
+            if tags and not all(
+                tag.lower() in [t.lower() for t in server.tags] for tag in tags
+            ):
+                continue
 
             # Capability filtering
             if capabilities:
                 server_caps = set(server.capabilities.keys())
-                required_caps = set(cap.lower() for cap in capabilities)
+                required_caps = {cap.lower() for cap in capabilities}
                 if not required_caps.issubset(cap.lower() for cap in server_caps):
                     continue
 
@@ -539,10 +554,10 @@ class MCPDiscovery:
     async def get_server_details(self, server_id: str) -> MCPServerInfo | None:
         """
         Get detailed information about a specific server.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             Server information or None if not found
         """
@@ -554,7 +569,7 @@ class MCPDiscovery:
     async def refresh_discovery(self) -> dict[str, MCPServerInfo]:
         """
         Refresh discovery cache.
-        
+
         Returns:
             Updated discovered servers
         """
@@ -563,7 +578,7 @@ class MCPDiscovery:
     def get_discovery_stats(self) -> dict[str, Any]:
         """
         Get discovery statistics.
-        
+
         Returns:
             Discovery statistics
         """
@@ -572,7 +587,7 @@ class MCPDiscovery:
                 "total_servers": 0,
                 "source_types": {},
                 "capabilities": {},
-                "tags": {}
+                "tags": {},
             }
 
         source_types = {}
@@ -581,10 +596,12 @@ class MCPDiscovery:
 
         for server in self.discovered_servers.values():
             # Count source types
-            source_types[server.source_type] = source_types.get(server.source_type, 0) + 1
+            source_types[server.source_type] = (
+                source_types.get(server.source_type, 0) + 1
+            )
 
             # Count capabilities
-            for cap in server.capabilities.keys():
+            for cap in server.capabilities:
                 capabilities[cap] = capabilities.get(cap, 0) + 1
 
             # Count tags
@@ -595,5 +612,5 @@ class MCPDiscovery:
             "total_servers": len(self.discovered_servers),
             "source_types": source_types,
             "capabilities": capabilities,
-            "tags": tags
+            "tags": tags,
         }

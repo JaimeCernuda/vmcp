@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class HealthStatus(Enum):
     """Health status levels."""
+
     HEALTHY = "healthy"
     DEGRADED = "degraded"
     UNHEALTHY = "unhealthy"
@@ -24,6 +25,7 @@ class HealthStatus(Enum):
 @dataclass
 class HealthCheck:
     """Individual health check result."""
+
     name: str
     status: HealthStatus
     message: str | None = None
@@ -49,7 +51,7 @@ class HealthChecker:
     def __init__(self, components: dict[str, Any]) -> None:
         """
         Initialize health checker.
-        
+
         Args:
             components: Dictionary of components to check
         """
@@ -108,7 +110,7 @@ class HealthChecker:
                     name="gateway",
                     status=HealthStatus.UNHEALTHY,
                     message="Gateway component not found",
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
 
             if hasattr(gateway, "is_running") and gateway.is_running():
@@ -124,14 +126,14 @@ class HealthChecker:
                     status=HealthStatus.HEALTHY,
                     message="Gateway is running",
                     details=details,
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
             else:
                 return HealthCheck(
                     name="gateway",
                     status=HealthStatus.UNHEALTHY,
                     message="Gateway is not running",
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
 
         except Exception as e:
@@ -140,7 +142,7 @@ class HealthChecker:
                 status=HealthStatus.UNHEALTHY,
                 message=f"Gateway check failed: {e}",
                 details={"error": str(e)},
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
     async def _check_registry(self) -> HealthCheck:
@@ -154,7 +156,7 @@ class HealthChecker:
                     name="registry",
                     status=HealthStatus.UNHEALTHY,
                     message="Registry component not found",
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
 
             # Get registry statistics
@@ -182,7 +184,7 @@ class HealthChecker:
                 status=status,
                 message=message,
                 details=stats,
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
         except Exception as e:
@@ -191,7 +193,7 @@ class HealthChecker:
                 status=HealthStatus.UNHEALTHY,
                 message=f"Registry check failed: {e}",
                 details={"error": str(e)},
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
     async def _check_servers(self) -> list[HealthCheck]:
@@ -233,22 +235,26 @@ class HealthChecker:
                         "capabilities": list(server_state.config.capabilities.keys()),
                     }
 
-                    checks.append(HealthCheck(
-                        name=f"server:{server_id}",
-                        status=status,
-                        message=message,
-                        details=details,
-                        duration=time.time() - start
-                    ))
+                    checks.append(
+                        HealthCheck(
+                            name=f"server:{server_id}",
+                            status=status,
+                            message=message,
+                            details=details,
+                            duration=time.time() - start,
+                        )
+                    )
 
                 except Exception as e:
-                    checks.append(HealthCheck(
-                        name=f"server:{getattr(server_state, 'config', {}).get('id', 'unknown')}",
-                        status=HealthStatus.UNHEALTHY,
-                        message=f"Server check failed: {e}",
-                        details={"error": str(e)},
-                        duration=time.time() - start
-                    ))
+                    checks.append(
+                        HealthCheck(
+                            name=f"server:{getattr(server_state, 'config', {}).get('id', 'unknown')}",
+                            status=HealthStatus.UNHEALTHY,
+                            message=f"Server check failed: {e}",
+                            details={"error": str(e)},
+                            duration=time.time() - start,
+                        )
+                    )
 
         except Exception as e:
             logger.error(f"Failed to check servers: {e}")
@@ -266,7 +272,7 @@ class HealthChecker:
                     name="router",
                     status=HealthStatus.UNHEALTHY,
                     message="Router component not found",
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
 
             # Get routing statistics
@@ -297,7 +303,7 @@ class HealthChecker:
                 status=status,
                 message=message,
                 details=stats,
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
         except Exception as e:
@@ -306,7 +312,7 @@ class HealthChecker:
                 status=HealthStatus.UNHEALTHY,
                 message=f"Router check failed: {e}",
                 details={"error": str(e)},
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
     async def _check_metrics(self) -> HealthCheck:
@@ -320,7 +326,7 @@ class HealthChecker:
                     name="metrics",
                     status=HealthStatus.DEGRADED,
                     message="Metrics collector not found",
-                    duration=time.time() - start
+                    duration=time.time() - start,
                 )
 
             # Try to get metrics
@@ -331,9 +337,10 @@ class HealthChecker:
                 status=HealthStatus.HEALTHY,
                 message="Metrics collector operational",
                 details={
-                    "entries": len(metrics_data.get("counters", {})) + len(metrics_data.get("gauges", {}))
+                    "entries": len(metrics_data.get("counters", {}))
+                    + len(metrics_data.get("gauges", {}))
                 },
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
         except Exception as e:
@@ -342,7 +349,7 @@ class HealthChecker:
                 status=HealthStatus.DEGRADED,
                 message=f"Metrics check failed: {e}",
                 details={"error": str(e)},
-                duration=time.time() - start
+                duration=time.time() - start,
             )
 
     def _determine_overall_status(self, checks: list[HealthCheck]) -> HealthStatus:

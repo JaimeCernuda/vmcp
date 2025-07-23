@@ -17,19 +17,21 @@ from ..errors import CircuitBreakerOpenError
 
 logger = logging.getLogger(__name__)
 
-T = TypeVar('T')
+T = TypeVar("T")
 
 
 class CircuitState(Enum):
     """Circuit breaker states."""
-    CLOSED = "closed"      # Normal operation
-    OPEN = "open"          # Failing, reject requests
+
+    CLOSED = "closed"  # Normal operation
+    OPEN = "open"  # Failing, reject requests
     HALF_OPEN = "half_open"  # Testing recovery
 
 
 @dataclass
 class CircuitBreakerConfig:
     """Circuit breaker configuration."""
+
     failure_threshold: int = 5
     recovery_timeout: float = 60.0
     expected_exception: type = Exception
@@ -42,6 +44,7 @@ class CircuitBreakerConfig:
 @dataclass
 class CircuitBreakerStats:
     """Circuit breaker statistics."""
+
     failure_count: int = 0
     success_count: int = 0
     consecutive_successes: int = 0
@@ -71,14 +74,10 @@ class CircuitBreakerStats:
 class CircuitBreaker:
     """Circuit breaker implementation for fault tolerance."""
 
-    def __init__(
-        self,
-        name: str,
-        config: CircuitBreakerConfig | None = None
-    ) -> None:
+    def __init__(self, name: str, config: CircuitBreakerConfig | None = None) -> None:
         """
         Initialize circuit breaker.
-        
+
         Args:
             name: Circuit breaker name for logging
             config: Configuration object
@@ -89,7 +88,9 @@ class CircuitBreaker:
         self._stats = CircuitBreakerStats()
         self._half_open_calls = 0
         self._lock = asyncio.Lock()
-        self._recent_calls: list[tuple[float, float, bool]] = []  # (timestamp, duration, success)
+        self._recent_calls: list[
+            tuple[float, float, bool]
+        ] = []  # (timestamp, duration, success)
 
     @property
     def state(self) -> CircuitState:
@@ -122,15 +123,15 @@ class CircuitBreaker:
     async def call(self, func: Callable[..., T], *args, **kwargs) -> T:
         """
         Execute function with circuit breaker protection.
-        
+
         Args:
             func: Function to execute
             *args: Function arguments
             **kwargs: Function keyword arguments
-            
+
         Returns:
             Function result
-            
+
         Raises:
             CircuitBreakerOpenError: If circuit is open
             Exception: Original exception from function
@@ -138,9 +139,7 @@ class CircuitBreaker:
         async with self._lock:
             if self.is_open:
                 raise CircuitBreakerOpenError(
-                    self.name,
-                    self._stats.failure_count,
-                    self._stats.last_failure_time
+                    self.name, self._stats.failure_count, self._stats.last_failure_time
                 )
 
             if self._state == CircuitState.HALF_OPEN:
@@ -148,7 +147,7 @@ class CircuitBreaker:
                     raise CircuitBreakerOpenError(
                         self.name,
                         self._stats.failure_count,
-                        self._stats.last_failure_time
+                        self._stats.last_failure_time,
                     )
                 self._half_open_calls += 1
 
@@ -247,16 +246,14 @@ class CircuitBreaker:
 
         # Check slow call rate
         slow_call_rate = self._stats.get_slow_call_rate()
-        if slow_call_rate > self.config.slow_call_rate_threshold:
-            return True
-
-        return False
+        return slow_call_rate > self.config.slow_call_rate_threshold
 
     def _should_attempt_reset(self) -> bool:
         """Check if we should try to reset the circuit."""
         return (
-            self._stats.last_failure_time is not None and
-            time.time() - self._stats.last_failure_time >= self.config.recovery_timeout
+            self._stats.last_failure_time is not None
+            and time.time() - self._stats.last_failure_time
+            >= self.config.recovery_timeout
         )
 
     async def _transition_to(self, new_state: CircuitState) -> None:
@@ -302,8 +299,7 @@ class CircuitBreaker:
         """Remove old call records."""
         cutoff_time = time.time() - 300  # Keep last 5 minutes
         self._recent_calls = [
-            call for call in self._recent_calls
-            if call[0] > cutoff_time
+            call for call in self._recent_calls if call[0] > cutoff_time
         ]
 
     def get_stats(self) -> dict[str, Any]:
@@ -350,18 +346,15 @@ class CircuitBreaker:
     def get_recent_call_stats(self, window_seconds: int = 60) -> dict[str, Any]:
         """
         Get statistics for recent calls within time window.
-        
+
         Args:
             window_seconds: Time window in seconds
-            
+
         Returns:
             Statistics for recent calls
         """
         cutoff_time = time.time() - window_seconds
-        recent_calls = [
-            call for call in self._recent_calls
-            if call[0] > cutoff_time
-        ]
+        recent_calls = [call for call in self._recent_calls if call[0] > cutoff_time]
 
         if not recent_calls:
             return {
@@ -378,8 +371,7 @@ class CircuitBreaker:
         failure_count = len(recent_calls) - success_count
         total_duration = sum(call[1] for call in recent_calls)
         slow_calls = sum(
-            1 for call in recent_calls
-            if call[1] > self.config.slow_call_threshold
+            1 for call in recent_calls if call[1] > self.config.slow_call_threshold
         )
 
         return {
@@ -402,17 +394,15 @@ class CircuitBreakerRegistry:
         self._lock = asyncio.Lock()
 
     async def get_breaker(
-        self,
-        name: str,
-        config: CircuitBreakerConfig | None = None
+        self, name: str, config: CircuitBreakerConfig | None = None
     ) -> CircuitBreaker:
         """
         Get or create circuit breaker.
-        
+
         Args:
             name: Circuit breaker name
             config: Configuration (uses default if None)
-            
+
         Returns:
             Circuit breaker instance
         """
@@ -425,10 +415,10 @@ class CircuitBreakerRegistry:
     async def remove_breaker(self, name: str) -> bool:
         """
         Remove circuit breaker.
-        
+
         Args:
             name: Circuit breaker name
-            
+
         Returns:
             True if breaker was removed, False if not found
         """
@@ -447,8 +437,7 @@ class CircuitBreakerRegistry:
         """Get statistics for all circuit breakers."""
         async with self._lock:
             return {
-                name: breaker.get_stats()
-                for name, breaker in self._breakers.items()
+                name: breaker.get_stats() for name, breaker in self._breakers.items()
             }
 
     async def reset_all(self) -> None:
@@ -470,18 +459,11 @@ class CircuitBreakerRegistry:
                     "overall_health": "healthy",
                 }
 
-            healthy = sum(
-                1 for breaker in self._breakers.values()
-                if breaker.is_closed
-            )
+            healthy = sum(1 for breaker in self._breakers.values() if breaker.is_closed)
             degraded = sum(
-                1 for breaker in self._breakers.values()
-                if breaker.is_half_open
+                1 for breaker in self._breakers.values() if breaker.is_half_open
             )
-            unhealthy = sum(
-                1 for breaker in self._breakers.values()
-                if breaker.is_open
-            )
+            unhealthy = sum(1 for breaker in self._breakers.values() if breaker.is_open)
 
             total = len(self._breakers)
 

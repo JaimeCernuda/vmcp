@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RequestMetrics:
     """Metrics for a single request."""
+
     method: str
     server_id: str | None
     start_time: float
@@ -42,7 +43,7 @@ class MetricsCollector:
     def __init__(self, window_size: int = 1000) -> None:
         """
         Initialize metrics collector.
-        
+
         Args:
             window_size: Size of rolling window for request metrics
         """
@@ -93,11 +94,11 @@ class MetricsCollector:
         success: bool = True,
         error_code: int | None = None,
         cached: bool = False,
-        response_size: int = 0
+        response_size: int = 0,
     ) -> None:
         """
         Record request metrics.
-        
+
         Args:
             method: Request method
             server_id: Server that handled request
@@ -118,7 +119,7 @@ class MetricsCollector:
                 success=success,
                 error_code=error_code,
                 cached=cached,
-                response_size=response_size
+                response_size=response_size,
             )
 
             # Add to collections
@@ -147,7 +148,7 @@ class MetricsCollector:
     async def update_gauge(self, name: str, value: float) -> None:
         """
         Update a gauge value.
-        
+
         Args:
             name: Gauge name
             value: New value
@@ -158,7 +159,7 @@ class MetricsCollector:
     async def increment_counter(self, name: str, value: int = 1) -> None:
         """
         Increment a counter.
-        
+
         Args:
             name: Counter name
             value: Increment value
@@ -169,7 +170,7 @@ class MetricsCollector:
     async def record_histogram(self, name: str, value: float) -> None:
         """
         Record value in histogram.
-        
+
         Args:
             name: Histogram name
             value: Value to record
@@ -190,19 +191,25 @@ class MetricsCollector:
             method_stats = {}
             for method, metrics_list in self.method_metrics.items():
                 if metrics_list:
-                    method_stats[method] = self._calculate_request_stats(list(metrics_list))
+                    method_stats[method] = self._calculate_request_stats(
+                        list(metrics_list)
+                    )
 
             # Server breakdown
             server_stats = {}
             for server_id, metrics_list in self.server_metrics.items():
                 if metrics_list:
-                    server_stats[server_id] = self._calculate_request_stats(list(metrics_list))
+                    server_stats[server_id] = self._calculate_request_stats(
+                        list(metrics_list)
+                    )
 
             # Histogram statistics
             histogram_stats = {}
             for name, values in self.histograms.items():
                 if values:
-                    histogram_stats[name] = self._calculate_histogram_stats(list(values))
+                    histogram_stats[name] = self._calculate_histogram_stats(
+                        list(values)
+                    )
 
             return {
                 "timestamp": time.time(),
@@ -217,7 +224,9 @@ class MetricsCollector:
                 "error_rate": self._calculate_error_rate(),
             }
 
-    def _calculate_request_stats(self, requests: list[RequestMetrics]) -> dict[str, Any]:
+    def _calculate_request_stats(
+        self, requests: list[RequestMetrics]
+    ) -> dict[str, Any]:
         """Calculate statistics for list of requests."""
         if not requests:
             return {
@@ -236,7 +245,9 @@ class MetricsCollector:
 
         # Calculate throughput (requests per second)
         if requests:
-            time_span = max(r.end_time for r in requests if r.end_time) - min(r.start_time for r in requests)
+            time_span = max(r.end_time for r in requests if r.end_time) - min(
+                r.start_time for r in requests
+            )
             throughput = len(requests) / max(time_span, 1.0)
         else:
             throughput = 0.0
@@ -360,8 +371,12 @@ class MetricsCollector:
         """Get approximate memory usage of metrics collections."""
         return {
             "request_metrics": len(self.request_metrics),
-            "method_metrics": sum(len(metrics) for metrics in self.method_metrics.values()),
-            "server_metrics": sum(len(metrics) for metrics in self.server_metrics.values()),
+            "method_metrics": sum(
+                len(metrics) for metrics in self.method_metrics.values()
+            ),
+            "server_metrics": sum(
+                len(metrics) for metrics in self.server_metrics.values()
+            ),
             "histogram_values": sum(len(values) for values in self.histograms.values()),
             "total_methods": len(self.method_metrics),
             "total_servers": len(self.server_metrics),
@@ -374,7 +389,7 @@ class PrometheusExporter:
     def __init__(self, metrics_collector: MetricsCollector) -> None:
         """
         Initialize Prometheus exporter.
-        
+
         Args:
             metrics_collector: Metrics collector instance
         """
@@ -398,12 +413,16 @@ class PrometheusExporter:
 
         lines.append("# HELP vmcp_requests_success_total Total successful requests")
         lines.append("# TYPE vmcp_requests_success_total counter")
-        lines.append(f"vmcp_requests_success_total {metrics['counters']['requests_success']}")
+        lines.append(
+            f"vmcp_requests_success_total {metrics['counters']['requests_success']}"
+        )
         lines.append("")
 
         lines.append("# HELP vmcp_requests_failed_total Total failed requests")
         lines.append("# TYPE vmcp_requests_failed_total counter")
-        lines.append(f"vmcp_requests_failed_total {metrics['counters']['requests_failed']}")
+        lines.append(
+            f"vmcp_requests_failed_total {metrics['counters']['requests_failed']}"
+        )
         lines.append("")
 
         # Gauge metrics
@@ -427,15 +446,25 @@ class PrometheusExporter:
         lines.append("# TYPE vmcp_request_duration_seconds histogram")
 
         # Method-specific metrics
-        for method, stats in metrics['methods'].items():
+        for method, stats in metrics["methods"].items():
             labels = f'method="{method}"'
-            lines.append(f'vmcp_request_duration_seconds_count{{{labels}}} {stats["count"]}')
-            lines.append(f'vmcp_request_duration_seconds_sum{{{labels}}} {stats["latency_mean"] * stats["count"]}')
+            lines.append(
+                f"vmcp_request_duration_seconds_count{{{labels}}} {stats['count']}"
+            )
+            lines.append(
+                f"vmcp_request_duration_seconds_sum{{{labels}}} {stats['latency_mean'] * stats['count']}"
+            )
 
             # Quantiles
-            lines.append(f'vmcp_request_duration_seconds{{quantile="0.5",{labels}}} {stats["latency_median"]}')
-            lines.append(f'vmcp_request_duration_seconds{{quantile="0.95",{labels}}} {stats["latency_p95"]}')
-            lines.append(f'vmcp_request_duration_seconds{{quantile="0.99",{labels}}} {stats["latency_p99"]}')
+            lines.append(
+                f'vmcp_request_duration_seconds{{quantile="0.5",{labels}}} {stats["latency_median"]}'
+            )
+            lines.append(
+                f'vmcp_request_duration_seconds{{quantile="0.95",{labels}}} {stats["latency_p95"]}'
+            )
+            lines.append(
+                f'vmcp_request_duration_seconds{{quantile="0.99",{labels}}} {stats["latency_p99"]}'
+            )
 
         lines.append("")
 

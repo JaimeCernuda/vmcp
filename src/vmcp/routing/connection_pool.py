@@ -9,11 +9,11 @@ import asyncio
 import logging
 import time
 from collections.abc import Callable
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager, suppress
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..errors import ConnectionError, ConnectionTimeoutError
+from ..errors import ConnectionTimeoutError, VMCPConnectionError
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PoolConfig:
     """Connection pool configuration."""
+
     min_size: int = 1
     max_size: int = 10
     idle_timeout: int = 300  # Seconds
@@ -35,6 +36,7 @@ class PoolConfig:
 @dataclass
 class PooledConnection:
     """Wrapper for pooled connections with metadata."""
+
     connection: Any
     created_at: float = field(default_factory=time.time)
     last_used: float = field(default_factory=time.time)
@@ -69,11 +71,11 @@ class ConnectionPool:
         self,
         server_id: str,
         connection_factory: Callable,
-        config: PoolConfig | None = None
+        config: PoolConfig | None = None,
     ) -> None:
         """
         Initialize connection pool.
-        
+
         Args:
             server_id: Unique server identifier
             connection_factory: Async function to create new connections
@@ -118,7 +120,9 @@ class ConnectionPool:
                 for i, conn in enumerate(connections):
                     if isinstance(conn, PooledConnection):
                         self.connections.append(conn)
-                        logger.debug(f"Created initial connection {i} for {self.server_id}")
+                        logger.debug(
+                            f"Created initial connection {i} for {self.server_id}"
+                        )
                     else:
                         logger.error(f"Failed to create initial connection {i}: {conn}")
 
@@ -132,7 +136,7 @@ class ConnectionPool:
 
         except Exception as e:
             logger.error(f"Failed to initialize pool for {self.server_id}: {e}")
-            raise ConnectionError(f"Pool initialization failed: {e}") from e
+            raise VMCPConnectionError(f"Pool initialization failed: {e}") from e
 
     async def close(self) -> None:
         """Close all connections in pool."""
@@ -142,10 +146,8 @@ class ConnectionPool:
         # Stop maintenance task
         if self._maintenance_task:
             self._maintenance_task.cancel()
-            try:
+            with suppress(asyncio.CancelledError):
                 await self._maintenance_task
-            except asyncio.CancelledError:
-                pass
             self._maintenance_task = None
 
         # Cancel all waiters
@@ -169,19 +171,19 @@ class ConnectionPool:
     async def acquire(self, timeout: float | None = None):
         """
         Acquire connection from pool with timeout.
-        
+
         Args:
             timeout: Timeout in seconds (uses config default if None)
-            
+
         Yields:
             Connection object
-            
+
         Raises:
             ConnectionTimeoutError: If timeout exceeded
-            ConnectionError: If pool is closing or other errors
+            VMCPConnectionError: If pool is closing or other errors
         """
         if self._closing:
-            raise ConnectionError("Connection pool is closing")
+            raise VMCPConnectionError("Connection pool is closing")
 
         timeout = timeout or self.config.acquire_timeout
         start_time = time.time()
@@ -250,7 +252,7 @@ class ConnectionPool:
                 raise ConnectionTimeoutError(
                     f"Failed to acquire connection within {timeout}s (waited {elapsed:.2f}s)",
                     timeout=timeout,
-                    server_id=self.server_id
+                    server_id=self.server_id,
                 )
 
             try:
@@ -270,12 +272,13 @@ class ConnectionPool:
 
         for attempt in range(self.config.retry_attempts):
             try:
-                logger.debug(f"Creating connection {connection_id} (attempt {attempt + 1})")
+                logger.debug(
+                    f"Creating connection {connection_id} (attempt {attempt + 1})"
+                )
                 connection = await self.connection_factory()
 
                 pooled = PooledConnection(
-                    connection=connection,
-                    connection_id=connection_id
+                    connection=connection, connection_id=connection_id
                 )
 
                 self._stats["created"] += 1
@@ -290,10 +293,12 @@ class ConnectionPool:
                 )
 
                 if attempt < self.config.retry_attempts - 1:
-                    delay = self.config.retry_delay * (2 ** attempt)  # Exponential backoff
+                    delay = self.config.retry_delay * (
+                        2**attempt
+                    )  # Exponential backoff
                     await asyncio.sleep(delay)
 
-        raise ConnectionError(
+        raise VMCPConnectionError(
             f"Failed to create connection after {self.config.retry_attempts} attempts: {last_error}"
         ) from last_error
 
@@ -321,8 +326,7 @@ class ConnectionPool:
 
         # Create replacement if needed
         async with self._lock:
-            if (not self._closing and
-                len(self.connections) < self.config.min_size):
+            if not self._closing and len(self.connections) < self.config.min_size:
                 try:
                     new_conn = await self._create_connection("replacement")
                     self.connections.append(new_conn)
@@ -344,7 +348,7 @@ class ConnectionPool:
                 return False
 
             # Attempt to ping if method exists
-            if hasattr(conn.connection, 'ping'):
+            if hasattr(conn.connection, "ping"):
                 result = await conn.connection.ping()
                 conn.last_validated = time.time()
                 conn.healthy = bool(result)
@@ -364,13 +368,15 @@ class ConnectionPool:
     async def _destroy_connection(self, conn: PooledConnection) -> None:
         """Destroy a connection."""
         try:
-            if hasattr(conn.connection, 'disconnect'):
+            if hasattr(conn.connection, "disconnect"):
                 await conn.connection.disconnect()
-            elif hasattr(conn.connection, 'close'):
+            elif hasattr(conn.connection, "close"):
                 await conn.connection.close()
 
             self._stats["destroyed"] += 1
-            logger.debug(f"Destroyed connection {conn.connection_id} for {self.server_id}")
+            logger.debug(
+                f"Destroyed connection {conn.connection_id} for {self.server_id}"
+            )
 
         except Exception as e:
             logger.warning(f"Error destroying connection {conn.connection_id}: {e}")
@@ -481,16 +487,16 @@ class ConnectionPoolManager:
         self,
         server_id: str,
         connection_factory: Callable,
-        config: PoolConfig | None = None
+        config: PoolConfig | None = None,
     ) -> ConnectionPool:
         """
         Get or create connection pool for server.
-        
+
         Args:
             server_id: Server identifier
             connection_factory: Function to create connections
             config: Pool configuration
-            
+
         Returns:
             Connection pool instance
         """
@@ -506,10 +512,10 @@ class ConnectionPoolManager:
     async def remove_pool(self, server_id: str) -> bool:
         """
         Remove and close connection pool.
-        
+
         Args:
             server_id: Server identifier
-            
+
         Returns:
             True if pool was removed, False if not found
         """
@@ -539,10 +545,7 @@ class ConnectionPoolManager:
 
     def get_all_stats(self) -> dict[str, dict[str, Any]]:
         """Get statistics for all pools."""
-        return {
-            server_id: pool.get_stats()
-            for server_id, pool in self._pools.items()
-        }
+        return {server_id: pool.get_stats() for server_id, pool in self._pools.items()}
 
     def get_pool_count(self) -> int:
         """Get number of managed pools."""

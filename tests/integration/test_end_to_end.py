@@ -30,26 +30,34 @@ class TestEndToEndFlow:
             id="mock-server",
             name="Mock MCP Server",
             transport="stdio",
-            command=["python", "-m", "src.vmcp.testing.mock_server", "--server-id", "mock-server"],
+            command=[
+                "python",
+                "-m",
+                "src.vmcp.testing.mock_server",
+                "--server-id",
+                "mock-server",
+            ],
             capabilities={
                 "tools": {"list_changed": True},
                 "resources": {"subscribe": True},
-                "prompts": {"list_changed": True}
+                "prompts": {"list_changed": True},
             },
-            enabled=True
+            enabled=True,
         )
 
         await registry.register_server(server_config)
         return registry
 
     @pytest.fixture
-    async def gateway_with_mock_server(self, temp_dir: Path, mock_server_registry: Registry) -> VMCPGateway:
+    async def gateway_with_mock_server(
+        self, temp_dir: Path, mock_server_registry: Registry
+    ) -> VMCPGateway:
         """Create gateway with mock server registered."""
         config = GatewayConfig(
             registry_path=str(temp_dir / "registry"),
             log_level="DEBUG",
             max_concurrent_requests=5,
-            request_timeout=10
+            request_timeout=10,
         )
 
         gateway = VMCPGateway(config)
@@ -67,12 +75,7 @@ class TestEndToEndFlow:
 
         try:
             # Test tools/list request
-            request = {
-                "jsonrpc": "2.0",
-                "id": 1,
-                "method": "tools/list",
-                "params": {}
-            }
+            request = {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
 
             response = await gateway.handle_request(request)
 
@@ -108,10 +111,8 @@ class TestEndToEndFlow:
                 "method": "tools/call",
                 "params": {
                     "name": "echo",
-                    "arguments": {
-                        "message": "Hello from integration test!"
-                    }
-                }
+                    "arguments": {"message": "Hello from integration test!"},
+                },
             }
 
             response = await gateway.handle_request(request)
@@ -143,7 +144,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 3,
                 "method": "resources/list",
-                "params": {}
+                "params": {},
             }
 
             list_response = await gateway.handle_request(list_request)
@@ -160,9 +161,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 4,
                 "method": "resources/read",
-                "params": {
-                    "uri": resource_uri
-                }
+                "params": {"uri": resource_uri},
             }
 
             read_response = await gateway.handle_request(read_request)
@@ -187,19 +186,24 @@ class TestEndToEndFlow:
                 id=f"mock-server-{i}",
                 name=f"Mock Server {i}",
                 transport="stdio",
-                command=["python", "-m", "src.vmcp.testing.mock_server", "--server-id", f"mock-server-{i}"],
+                command=[
+                    "python",
+                    "-m",
+                    "src.vmcp.testing.mock_server",
+                    "--server-id",
+                    f"mock-server-{i}",
+                ],
                 capabilities={
                     "tools": {"list_changed": True},
-                    "resources": {"subscribe": True}
+                    "resources": {"subscribe": True},
                 },
-                enabled=True
+                enabled=True,
             )
             await registry.register_server(server_config)
 
         # Create gateway
         config = GatewayConfig(
-            registry_path=str(temp_dir / "registry"),
-            log_level="DEBUG"
+            registry_path=str(temp_dir / "registry"), log_level="DEBUG"
         )
 
         gateway = VMCPGateway(config)
@@ -215,7 +219,7 @@ class TestEndToEndFlow:
                     "jsonrpc": "2.0",
                     "id": i + 10,
                     "method": "tools/list",
-                    "params": {}
+                    "params": {},
                 }
 
                 response = await gateway.handle_request(request)
@@ -240,7 +244,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 5,
                 "method": "invalid/method",
-                "params": {}
+                "params": {},
             }
 
             response = await gateway.handle_request(request)
@@ -255,10 +259,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 6,
                 "method": "tools/call",
-                "params": {
-                    "name": "nonexistent_tool",
-                    "arguments": {}
-                }
+                "params": {"name": "nonexistent_tool", "arguments": {}},
             }
 
             response = await gateway.handle_request(request)
@@ -286,10 +287,8 @@ class TestEndToEndFlow:
                     "method": "tools/call",
                     "params": {
                         "name": "echo",
-                        "arguments": {
-                            "message": f"Concurrent message {i}"
-                        }
-                    }
+                        "arguments": {"message": f"Concurrent message {i}"},
+                    },
                 }
                 requests.append(gateway.handle_request(request))
 
@@ -322,7 +321,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 200,
                 "method": "vmcp/servers/list",
-                "params": {}
+                "params": {},
             }
 
             response = await gateway.handle_request(request)
@@ -349,7 +348,7 @@ class TestEndToEndFlow:
                 "jsonrpc": "2.0",
                 "id": 201,
                 "method": "vmcp/metrics",
-                "params": {}
+                "params": {},
             }
 
             response = await gateway.handle_request(request)
@@ -372,7 +371,9 @@ class TestEndToEndFlow:
 class TestPerformanceIntegration:
     """Test performance characteristics of the complete system."""
 
-    async def test_throughput_under_load(self, gateway_with_mock_server: VMCPGateway, performance_monitor):
+    async def test_throughput_under_load(
+        self, gateway_with_mock_server: VMCPGateway, performance_monitor
+    ):
         """Test system throughput under load."""
         gateway = gateway_with_mock_server
 
@@ -392,8 +393,8 @@ class TestPerformanceIntegration:
                     "method": "tools/call",
                     "params": {
                         "name": "echo",
-                        "arguments": {"message": f"Load test {i}"}
-                    }
+                        "arguments": {"message": f"Load test {i}"},
+                    },
                 }
                 requests.append(gateway.handle_request(request))
 
@@ -444,7 +445,7 @@ class TestPerformanceIntegration:
                         "jsonrpc": "2.0",
                         "id": batch * 20 + i,
                         "method": "ping",
-                        "params": {}
+                        "params": {},
                     }
                     requests.append(gateway.handle_request(request))
 
@@ -462,7 +463,9 @@ class TestPerformanceIntegration:
 
             # Memory should not increase dramatically
             max_allowed_increase = 50 * 1024 * 1024  # 50 MB
-            assert memory_increase < max_allowed_increase, "Memory usage increased too much"
+            assert memory_increase < max_allowed_increase, (
+                "Memory usage increased too much"
+            )
 
         finally:
             await gateway.stop()
@@ -484,15 +487,10 @@ class TestConfigurationIntegration:
                 "cache_enabled": True,
                 "cache_ttl": 120,
                 "max_connections": 50,
-                "request_timeout": 15
+                "request_timeout": 15,
             },
-            "transports": {
-                "stdio": {"enabled": True}
-            },
-            "routing": {
-                "default_strategy": "capability",
-                "load_balancer": "adaptive"
-            },
+            "transports": {"stdio": {"enabled": True}},
+            "routing": {"default_strategy": "capability", "load_balancer": "adaptive"},
             "servers": {
                 "test-server": {
                     "id": "test-server",
@@ -500,15 +498,14 @@ class TestConfigurationIntegration:
                     "transport": "stdio",
                     "command": ["python", "-m", "src.vmcp.testing.mock_server"],
                     "enabled": True,
-                    "capabilities": {
-                        "tools": {"list_changed": True}
-                    }
+                    "capabilities": {"tools": {"list_changed": True}},
                 }
-            }
+            },
         }
 
         import toml
-        with open(config_file, 'w') as f:
+
+        with open(config_file, "w") as f:
             toml.dump(config_data, f)
 
         # Load configuration
@@ -549,12 +546,13 @@ class TestConfigurationIntegration:
                 "gateway": {
                     "registry_path": "${VMCP_REGISTRY_PATH}",
                     "log_level": "${VMCP_LOG_LEVEL}",
-                    "cache_ttl": "${VMCP_CACHE_TTL}"
+                    "cache_ttl": "${VMCP_CACHE_TTL}",
                 }
             }
 
             import toml
-            with open(config_file, 'w') as f:
+
+            with open(config_file, "w") as f:
                 toml.dump(config_data, f)
 
             # Load configuration
@@ -562,7 +560,9 @@ class TestConfigurationIntegration:
             loaded_config = config_loader.load_from_file(config_file)
 
             # Verify substitution occurred
-            assert loaded_config["gateway"]["registry_path"] == str(temp_dir / "custom_registry")
+            assert loaded_config["gateway"]["registry_path"] == str(
+                temp_dir / "custom_registry"
+            )
             assert loaded_config["gateway"]["log_level"] == "WARNING"
             assert loaded_config["gateway"]["cache_ttl"] == "180"
 

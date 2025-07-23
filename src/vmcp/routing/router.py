@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class RoutingContext:
     """Context for routing decisions."""
+
     request: dict[str, Any]
     session_id: str | None = None
     persona: str | None = None
@@ -44,6 +45,7 @@ class RoutingContext:
 @dataclass
 class RoutingResult:
     """Result of routing operation."""
+
     server_id: str | None
     source: str  # "path", "content", "capability", "cache", "fallback"
     duration: float
@@ -57,7 +59,7 @@ class Router:
     def __init__(self, registry) -> None:
         """
         Initialize router.
-        
+
         Args:
             registry: Server registry instance
         """
@@ -91,24 +93,22 @@ class Router:
             "capability": 0,
             "cache": 0,
             "fallback": 0,
-            "errors": 0
+            "errors": 0,
         }
 
     async def route(
-        self,
-        request: dict[str, Any],
-        context: RoutingContext | None = None
+        self, request: dict[str, Any], context: RoutingContext | None = None
     ) -> dict[str, Any]:
         """
         Route request to appropriate MCP server.
-        
+
         Args:
             request: JSON-RPC request
             context: Routing context
-            
+
         Returns:
             JSON-RPC response
-            
+
         Raises:
             NoServerFoundError: If no server can handle request
             RoutingError: If routing fails
@@ -125,7 +125,7 @@ class Router:
             if not routing_result.server_id:
                 raise VMCPError(
                     VMCPErrorCode.SERVER_NOT_FOUND,
-                    f"No server found for method: {request.get('method', 'unknown')}"
+                    f"No server found for method: {request.get('method', 'unknown')}",
                 )
 
             server_id = routing_result.server_id
@@ -135,10 +135,7 @@ class Router:
 
             # Execute request with circuit breaker protection
             response = await breaker.call(
-                self._forward_request,
-                server_id,
-                request,
-                context
+                self._forward_request, server_id, request, context
             )
 
             # Update routing cache on success
@@ -149,13 +146,13 @@ class Router:
 
         except Exception as e:
             self._routing_stats["errors"] += 1
-            logger.error(f"Routing error for {request.get('method')}: {e}", exc_info=True)
+            logger.error(
+                f"Routing error for {request.get('method')}: {e}", exc_info=True
+            )
 
             # Return JSON-RPC error response
             return self._create_error_response(
-                request.get("id"),
-                VMCPErrorCode.ROUTING_FAILED,
-                f"Routing failed: {e}"
+                request.get("id"), VMCPErrorCode.ROUTING_FAILED, f"Routing failed: {e}"
             )
 
     async def _find_server(self, context: RoutingContext) -> RoutingResult:
@@ -170,9 +167,9 @@ class Router:
             cache_time = self._cache_timestamps.get(cache_key, 0)
 
             # Validate cache entry
-            if (time.time() - cache_time < self._cache_ttl and
-                self._is_server_available(cached_server)):
-
+            if time.time() - cache_time < self._cache_ttl and self._is_server_available(
+                cached_server
+            ):
                 self._cache_hits += 1
                 self._routing_stats["cache"] += 1
 
@@ -180,7 +177,7 @@ class Router:
                     server_id=cached_server,
                     source="cache",
                     duration=time.time() - start_time,
-                    cached=True
+                    cached=True,
                 )
             else:
                 # Remove stale cache entry
@@ -193,9 +190,7 @@ class Router:
         if server_id and self._is_server_available(server_id):
             self._routing_stats["path"] += 1
             return RoutingResult(
-                server_id=server_id,
-                source="path",
-                duration=time.time() - start_time
+                server_id=server_id, source="path", duration=time.time() - start_time
             )
 
         # Try content-based routing
@@ -203,24 +198,21 @@ class Router:
         if server_id and self._is_server_available(server_id):
             self._routing_stats["content"] += 1
             return RoutingResult(
-                server_id=server_id,
-                source="content",
-                duration=time.time() - start_time
+                server_id=server_id, source="content", duration=time.time() - start_time
             )
 
         # Try capability-based routing
         required_capability = self.capability_router.get_method_capability(method)
         if required_capability:
             server_id = self.capability_router.route_by_capability(
-                context.request,
-                required_capability
+                context.request, required_capability
             )
             if server_id and self._is_server_available(server_id):
                 self._routing_stats["capability"] += 1
                 return RoutingResult(
                     server_id=server_id,
                     source="capability",
-                    duration=time.time() - start_time
+                    duration=time.time() - start_time,
                 )
 
         # Fallback: find any server that supports the method
@@ -230,7 +222,7 @@ class Router:
             return RoutingResult(
                 server_id=server_id,
                 source="fallback",
-                duration=time.time() - start_time
+                duration=time.time() - start_time,
             )
 
         # No server found
@@ -238,7 +230,7 @@ class Router:
             server_id=None,
             source="none",
             duration=time.time() - start_time,
-            error="No capable server found"
+            error="No capable server found",
         )
 
     async def _find_fallback_server(self, method: str) -> str | None:
@@ -286,14 +278,10 @@ class Router:
         if not server_state:
             return False
 
-        return (server_state.config.enabled and
-                server_state.is_healthy)
+        return server_state.config.enabled and server_state.is_healthy
 
     async def _forward_request(
-        self,
-        server_id: str,
-        request: dict[str, Any],
-        context: RoutingContext
+        self, server_id: str, request: dict[str, Any], context: RoutingContext
     ) -> dict[str, Any]:
         """Forward request to MCP server."""
         logger.debug(f"Forwarding request to server {server_id}")
@@ -305,8 +293,7 @@ class Router:
             pool = await self.registry.get_connection_pool(server_id)
             if not pool:
                 raise ServerUnavailableError(
-                    server_id,
-                    reason="No connection pool available"
+                    server_id, reason="No connection pool available"
                 )
 
             # Execute request using connection pool
@@ -351,32 +338,22 @@ class Router:
         if not self._cache_timestamps:
             return
 
-        oldest_key = min(self._cache_timestamps.keys(),
-                        key=lambda k: self._cache_timestamps[k])
+        oldest_key = min(
+            self._cache_timestamps.keys(), key=lambda k: self._cache_timestamps[k]
+        )
         self._remove_from_cache(oldest_key)
 
     def _create_error_response(
-        self,
-        request_id: Any,
-        code: int,
-        message: str
+        self, request_id: Any, code: int, message: str
     ) -> dict[str, Any]:
         """Create JSON-RPC error response."""
         return {
             "jsonrpc": "2.0",
             "id": request_id,
-            "error": {
-                "code": code,
-                "message": message
-            }
+            "error": {"code": code, "message": message},
         }
 
-    def add_path_rule(
-        self,
-        pattern: str,
-        server_id: str,
-        priority: int = 0
-    ) -> None:
+    def add_path_rule(self, pattern: str, server_id: str, priority: int = 0) -> None:
         """Add path-based routing rule."""
         self.path_router.add_rule(pattern, server_id, priority)
         self.clear_route_cache()
@@ -386,7 +363,7 @@ class Router:
         server_id: str,
         tool_name: str | None = None,
         resource_pattern: str | None = None,
-        priority: int = 0
+        priority: int = 0,
     ) -> None:
         """Add content-based routing rule."""
         if tool_name:
@@ -400,14 +377,12 @@ class Router:
         """Remove all routing rules for a server."""
         # Remove path rules
         self.path_router.rules = [
-            rule for rule in self.path_router.rules
-            if rule.server_id != server_id
+            rule for rule in self.path_router.rules if rule.server_id != server_id
         ]
 
         # Remove content rules
         self.content_router.rules = [
-            rule for rule in self.content_router.rules
-            if rule.server_id != server_id
+            rule for rule in self.content_router.rules if rule.server_id != server_id
         ]
 
         self.clear_route_cache()
@@ -478,33 +453,39 @@ class Router:
 
         for rule in self.path_router.get_rules():
             if rule["server_id"] not in all_server_ids:
-                issues.append({
-                    "type": "missing_server",
-                    "rule_type": "path",
-                    "rule": rule,
-                    "message": f"Path rule references non-existent server: {rule['server_id']}"
-                })
+                issues.append(
+                    {
+                        "type": "missing_server",
+                        "rule_type": "path",
+                        "rule": rule,
+                        "message": f"Path rule references non-existent server: {rule['server_id']}",
+                    }
+                )
 
         for rule in self.content_router.get_rules():
             if rule["server_id"] not in all_server_ids:
-                issues.append({
-                    "type": "missing_server",
-                    "rule_type": "content",
-                    "rule": rule,
-                    "message": f"Content rule references non-existent server: {rule['server_id']}"
-                })
+                issues.append(
+                    {
+                        "type": "missing_server",
+                        "rule_type": "content",
+                        "rule": rule,
+                        "message": f"Content rule references non-existent server: {rule['server_id']}",
+                    }
+                )
 
         # Check for conflicting rules
         path_patterns = {}
         for rule in self.path_router.get_rules():
             pattern = rule["pattern"]
             if pattern in path_patterns:
-                issues.append({
-                    "type": "conflicting_rules",
-                    "rule_type": "path",
-                    "message": f"Duplicate path pattern: {pattern}",
-                    "rules": [path_patterns[pattern], rule]
-                })
+                issues.append(
+                    {
+                        "type": "conflicting_rules",
+                        "rule_type": "path",
+                        "message": f"Duplicate path pattern: {pattern}",
+                        "rules": [path_patterns[pattern], rule],
+                    }
+                )
             else:
                 path_patterns[pattern] = rule
 

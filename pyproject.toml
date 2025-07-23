@@ -107,8 +107,6 @@ extend-exclude = '''
 
 [tool.ruff]
 line-length = 88
-select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "SIM", "PT"]
-ignore = ["E501", "B008", "A003"]
 exclude = [
     ".bzr",
     ".direnv",
@@ -131,7 +129,11 @@ exclude = [
     "venv",
 ]
 
-[tool.ruff.per-file-ignores]
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP", "B", "A", "C4", "SIM", "PT"]
+ignore = ["E501", "B008", "A003"]
+
+[tool.ruff.lint.per-file-ignores]
 "tests/*" = ["S101", "S311"]
 
 [tool.mypy]
@@ -185,4 +187,5 @@ exclude_lines = [
 dev = [
     "pytest>=8.4.1",
     "pytest-asyncio>=1.1.0",
+    "ruff>=0.12.4",
 ]

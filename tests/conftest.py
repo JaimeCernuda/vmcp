@@ -64,17 +64,17 @@ def test_config(temp_dir: Path) -> dict[str, Any]:
             "max_connections": 10,
             "request_timeout": 5,
             "health_check_interval": 5,
-            "max_concurrent_requests": 5
+            "max_concurrent_requests": 5,
         },
         "transports": {
             "stdio": {"enabled": True},
-            "http": {"enabled": False, "port": 3000, "host": "127.0.0.1"}
+            "http": {"enabled": False, "port": 3000, "host": "127.0.0.1"},
         },
         "routing": {
             "default_strategy": "hybrid",
             "load_balancer": "round_robin",
             "cache_enabled": True,
-            "cache_ttl": 60
+            "cache_ttl": 60,
         },
         "servers": {
             "test-server": {
@@ -85,10 +85,10 @@ def test_config(temp_dir: Path) -> dict[str, Any]:
                 "enabled": True,
                 "capabilities": {
                     "tools": {"list_changed": True},
-                    "resources": {"subscribe": True}
-                }
+                    "resources": {"subscribe": True},
+                },
             }
-        }
+        },
     }
 
 
@@ -129,7 +129,7 @@ def mock_server() -> MockMCPServer:
         server_id="test-mock-server",
         simulate_errors=False,
         error_rate=0.0,
-        response_delay=0.0
+        response_delay=0.0,
     )
 
 
@@ -140,29 +140,20 @@ def mock_server_with_errors() -> MockMCPServer:
         server_id="error-mock-server",
         simulate_errors=True,
         error_rate=0.2,
-        response_delay=0.1
+        response_delay=0.1,
     )
 
 
 @pytest.fixture
 def sample_json_rpc_request() -> dict[str, Any]:
     """Sample JSON-RPC request for tests."""
-    return {
-        "jsonrpc": "2.0",
-        "id": 1,
-        "method": "tools/list",
-        "params": {}
-    }
+    return {"jsonrpc": "2.0", "id": 1, "method": "tools/list", "params": {}}
 
 
 @pytest.fixture
 def sample_json_rpc_notification() -> dict[str, Any]:
     """Sample JSON-RPC notification for tests."""
-    return {
-        "jsonrpc": "2.0",
-        "method": "initialized",
-        "params": {}
-    }
+    return {"jsonrpc": "2.0", "method": "initialized", "params": {}}
 
 
 @pytest.fixture
@@ -176,13 +167,10 @@ def sample_initialize_request() -> dict[str, Any]:
             "protocolVersion": "2024-11-05",
             "capabilities": {
                 "tools": {"list_changed": True},
-                "resources": {"subscribe": True}
+                "resources": {"subscribe": True},
             },
-            "clientInfo": {
-                "name": "vMCP Test Client",
-                "version": "1.0.0"
-            }
-        }
+            "clientInfo": {"name": "vMCP Test Client", "version": "1.0.0"},
+        },
     }
 
 
@@ -193,12 +181,7 @@ def sample_tools_call_request() -> dict[str, Any]:
         "jsonrpc": "2.0",
         "id": 2,
         "method": "tools/call",
-        "params": {
-            "name": "echo",
-            "arguments": {
-                "message": "Hello, World!"
-            }
-        }
+        "params": {"name": "echo", "arguments": {"message": "Hello, World!"}},
     }
 
 
@@ -214,7 +197,7 @@ def setup_test_logging():
     """Setup logging for tests."""
     logging.basicConfig(
         level=logging.DEBUG,
-        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
     )
 
 
@@ -233,7 +216,9 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "unit: mark test as unit test")
     config.addinivalue_line("markers", "integration: mark test as integration test")
     config.addinivalue_line("markers", "slow: mark test as slow running")
-    config.addinivalue_line("markers", "requires_network: mark test as requiring network access")
+    config.addinivalue_line(
+        "markers", "requires_network: mark test as requiring network access"
+    )
 
 
 # Skip conditions
@@ -305,7 +290,9 @@ def performance_monitor():
             return {
                 "duration": end_time - self.start_time,
                 "memory_delta": end_memory - self.start_memory,
-                "peak_memory": self.process.memory_info().peak_wss if hasattr(self.process.memory_info(), 'peak_wss') else None
+                "peak_memory": self.process.memory_info().peak_wss
+                if hasattr(self.process.memory_info(), "peak_wss")
+                else None,
             }
 
     return PerformanceMonitor()
@@ -315,5 +302,5 @@ def performance_monitor():
 @pytest.fixture(autouse=True)
 def cleanup_async_tasks():
     """Cleanup any remaining async tasks after each test."""
-    yield
+    return
     # Simplified cleanup - let pytest-asyncio handle task cleanup

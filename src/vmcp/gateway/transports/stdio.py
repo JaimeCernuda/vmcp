@@ -6,11 +6,12 @@ over stdin/stdout with proper framing, as specified in the technical specificati
 """
 
 import asyncio
+import contextlib
 import logging
 import sys
 from typing import Any
 
-from ...errors import ConnectionError, ConnectionTimeoutError, TransportError
+from ...errors import ConnectionTimeoutError, TransportError, VMCPConnectionError
 from ..protocol import ProtocolHandler
 from .base import MessageFraming, Transport
 
@@ -21,13 +22,11 @@ class StdioTransport(Transport):
     """Standard I/O transport implementation."""
 
     def __init__(
-        self,
-        message_handler,
-        protocol_handler: ProtocolHandler | None = None
+        self, message_handler, protocol_handler: ProtocolHandler | None = None
     ) -> None:
         """
         Initialize stdio transport.
-        
+
         Args:
             message_handler: Function to handle incoming messages
             protocol_handler: Protocol handler (creates new one if None)
@@ -59,8 +58,7 @@ class StdioTransport(Transport):
 
             # Setup stdout writer
             transport, _ = await loop.connect_write_pipe(
-                lambda: asyncio.Protocol(),
-                sys.stdout
+                lambda: asyncio.Protocol(), sys.stdout
             )
             self._writer = asyncio.StreamWriter(transport, None, self._reader, loop)
 
@@ -87,10 +85,8 @@ class StdioTransport(Transport):
         # Cancel read task
         if self._read_task:
             self._read_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._read_task
-            except asyncio.CancelledError:
-                pass
             self._read_task = None
 
         # Close writer
@@ -109,17 +105,15 @@ class StdioTransport(Transport):
         logger.info("Stdio transport stopped")
 
     async def send_message(
-        self,
-        message: dict[str, Any],
-        connection_id: str | None = None
+        self, message: dict[str, Any], connection_id: str | None = None
     ) -> None:
         """
         Send a message through stdio.
-        
+
         Args:
             message: Message to send
             connection_id: Ignored for stdio transport
-            
+
         Raises:
             TransportError: If message cannot be sent
         """
@@ -139,7 +133,9 @@ class StdioTransport(Transport):
                 await self._writer.drain()
 
             self._record_message_sent(len(framed_data))
-            logger.debug(f"Sent message: {message.get('method', 'response')} ({len(framed_data)} bytes)")
+            logger.debug(
+                f"Sent message: {message.get('method', 'response')} ({len(framed_data)} bytes)"
+            )
 
         except Exception as e:
             self._record_error()
@@ -171,10 +167,7 @@ class StdioTransport(Transport):
 
                     # Send parse error response if possible
                     error_response = self.protocol_handler.create_error_response(
-                        None,
-                        -32700,
-                        "Parse error",
-                        {"details": str(e)}
+                        None, -32700, "Parse error", {"details": str(e)}
                     )
                     await self.send_message(error_response)
                     continue
@@ -199,10 +192,10 @@ class StdioTransport(Transport):
     async def _read_message(self) -> str | None:
         """
         Read a single framed message from stdin.
-        
+
         Returns:
             Message string or None if stream ended
-            
+
         Raises:
             TransportError: If message framing is invalid
         """
@@ -222,7 +215,7 @@ class StdioServerConnection:
     def __init__(self, server_config) -> None:
         """
         Initialize stdio server connection.
-        
+
         Args:
             server_config: Server configuration object
         """
@@ -246,7 +239,11 @@ class StdioServerConnection:
 
             # Build command
             command = [self.server_config.command] + self.server_config.args
-            env = {**self.server_config.environment} if self.server_config.environment else None
+            env = (
+                {**self.server_config.environment}
+                if self.server_config.environment
+                else None
+            )
 
             # Start server process
             self.process = await asyncio.create_subprocess_exec(
@@ -254,7 +251,7 @@ class StdioServerConnection:
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
-                env=env
+                env=env,
             )
 
             self._connected = True
@@ -269,7 +266,9 @@ class StdioServerConnection:
 
         except Exception as e:
             await self.disconnect()
-            raise ConnectionError(f"Failed to connect to server {self.server_config.id}: {e}") from e
+            raise VMCPConnectionError(
+                f"Failed to connect to server {self.server_config.id}: {e}"
+            ) from e
 
     async def disconnect(self) -> None:
         """Disconnect from the MCP server."""
@@ -288,10 +287,8 @@ class StdioServerConnection:
         # Cancel read task
         if self._read_task:
             self._read_task.cancel()
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await self._read_task
-            except asyncio.CancelledError:
-                pass
             self._read_task = None
 
         # Terminate process
@@ -300,7 +297,9 @@ class StdioServerConnection:
                 self.process.terminate()
                 await asyncio.wait_for(self.process.wait(), timeout=5.0)
             except asyncio.TimeoutError:
-                logger.warning(f"Server {self.server_config.id} did not terminate gracefully, killing")
+                logger.warning(
+                    f"Server {self.server_config.id} did not terminate gracefully, killing"
+                )
                 self.process.kill()
                 await self.process.wait()
             except Exception as e:
@@ -311,27 +310,25 @@ class StdioServerConnection:
         logger.info(f"Disconnected from server {self.server_config.id}")
 
     async def send_request(
-        self,
-        message: dict[str, Any],
-        timeout: float = 30.0
+        self, message: dict[str, Any], timeout: float = 30.0
     ) -> dict[str, Any]:
         """
         Send a request to the server and wait for response.
-        
+
         Args:
             message: Request message
             timeout: Timeout in seconds
-            
+
         Returns:
             Response message
-            
+
         Raises:
-            ConnectionError: If not connected
+            VMCPConnectionError: If not connected
             ConnectionTimeoutError: If request times out
             TransportError: If send fails
         """
         if not self._connected or not self.process:
-            raise ConnectionError(f"Not connected to server {self.server_config.id}")
+            raise VMCPConnectionError(f"Not connected to server {self.server_config.id}")
 
         # Generate request ID if not present
         if "id" not in message:
@@ -359,7 +356,7 @@ class StdioServerConnection:
                 f"Request to server {self.server_config.id} timed out after {timeout}s",
                 timeout=timeout,
                 server_id=self.server_config.id,
-                request_id=request_id
+                request_id=request_id,
             ) from e
         except Exception as e:
             # Clean up pending request
@@ -386,7 +383,9 @@ class StdioServerConnection:
                 self.process.stdin.write(framed_data)
                 await self.process.stdin.drain()
 
-            logger.debug(f"Sent to {self.server_config.id}: {message.get('method', 'response')}")
+            logger.debug(
+                f"Sent to {self.server_config.id}: {message.get('method', 'response')}"
+            )
 
         except Exception as e:
             raise TransportError(f"Failed to send message to server: {e}") from e
@@ -398,7 +397,9 @@ class StdioServerConnection:
         while self._connected and self.process and self.process.stdout:
             try:
                 # Read framed message
-                message_str = await MessageFraming.read_framed_message(self.process.stdout)
+                message_str = await MessageFraming.read_framed_message(
+                    self.process.stdout
+                )
                 if message_str is None:
                     logger.info(f"Server {self.server_config.id} closed stdout")
                     break
@@ -407,7 +408,9 @@ class StdioServerConnection:
                 try:
                     message = self.protocol_handler.parse_message(message_str)
                 except Exception as e:
-                    logger.warning(f"Failed to parse response from {self.server_config.id}: {e}")
+                    logger.warning(
+                        f"Failed to parse response from {self.server_config.id}: {e}"
+                    )
                     continue
 
                 # Handle response
@@ -417,10 +420,14 @@ class StdioServerConnection:
                     if future and not future.done():
                         future.set_result(message)
                     else:
-                        logger.warning(f"Unexpected response from {self.server_config.id}: {request_id}")
+                        logger.warning(
+                            f"Unexpected response from {self.server_config.id}: {request_id}"
+                        )
                 else:
                     # Handle notification
-                    logger.debug(f"Received notification from {self.server_config.id}: {message.get('method')}")
+                    logger.debug(
+                        f"Received notification from {self.server_config.id}: {message.get('method')}"
+                    )
 
             except asyncio.CancelledError:
                 break
@@ -433,28 +440,29 @@ class StdioServerConnection:
     async def _initialize_connection(self) -> None:
         """Perform initialization handshake with server."""
         # Try FastMCP format first for iowarp-mcps servers
-        if "iowarp-mcps" in str(self.server_config.command) or "iowarp-mcps" in str(self.server_config.args):
+        if "iowarp-mcps" in str(self.server_config.command) or "iowarp-mcps" in str(
+            self.server_config.args
+        ):
             self._is_fastmcp = True
             logger.debug(f"Detected FastMCP server: {self.server_config.id}")
-        
+
         # Send initialize request
         init_request = self.protocol_handler.create_request(
             "initialize",
             {
                 "protocolVersion": "2025-03-26",  # Use FastMCP protocol version for iowarp servers
                 "capabilities": {},
-                "clientInfo": {
-                    "name": "vMCP Gateway",
-                    "version": "1.0.0"
-                }
-            }
+                "clientInfo": {"name": "vMCP Gateway", "version": "1.0.0"},
+            },
         )
 
         try:
             response = await self.send_request(init_request, timeout=10.0)
 
             if "error" in response:
-                raise ConnectionError(f"Server initialization failed: {response['error']}")
+                raise VMCPConnectionError(
+                    f"Server initialization failed: {response['error']}"
+                )
 
             logger.debug(f"Server {self.server_config.id} initialized successfully")
 
@@ -465,12 +473,14 @@ class StdioServerConnection:
             await self._send_message(initialized_notification)
 
         except Exception as e:
-            raise ConnectionError(f"Failed to initialize server {self.server_config.id}: {e}") from e
+            raise VMCPConnectionError(
+                f"Failed to initialize server {self.server_config.id}: {e}"
+            ) from e
 
     async def ping(self) -> bool:
         """
         Ping the server to check if it's alive.
-        
+
         Returns:
             True if server responds, False otherwise
         """

@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ServerMetrics:
     """Metrics for load balancing decisions."""
+
     server_id: str
     active_connections: int = 0
     total_requests: int = 0
@@ -64,27 +65,25 @@ class LoadBalancer(ABC):
     async def select(self, servers: list[Any]) -> Any:
         """
         Select a server from the list.
-        
+
         Args:
             servers: List of available servers
-            
+
         Returns:
             Selected server
-            
+
         Raises:
             ValueError: If no servers available
         """
         pass
 
+    @abstractmethod
     def record_request(
-        self,
-        server_id: str,
-        response_time: float,
-        success: bool = True
+        self, server_id: str, response_time: float, success: bool = True
     ) -> None:
         """
         Record request metrics for load balancing decisions.
-        
+
         Args:
             server_id: Server identifier
             response_time: Request response time in seconds
@@ -139,16 +138,16 @@ class LeastConnectionsBalancer(LoadBalancer):
         async with self._lock:
             # Initialize metrics for new servers
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 if server_id not in self.metrics:
                     self.metrics[server_id] = ServerMetrics(server_id=server_id)
 
             # Find server with least connections
-            min_connections = float('inf')
+            min_connections = float("inf")
             selected_server = None
 
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 metrics = self.metrics[server_id]
 
                 if metrics.active_connections < min_connections:
@@ -157,7 +156,7 @@ class LeastConnectionsBalancer(LoadBalancer):
 
             # Increment connection count
             if selected_server:
-                server_id = getattr(selected_server, 'id', str(selected_server))
+                server_id = getattr(selected_server, "id", str(selected_server))
                 self.metrics[server_id].active_connections += 1
 
             return selected_server
@@ -170,10 +169,7 @@ class LeastConnectionsBalancer(LoadBalancer):
             )
 
     def record_request(
-        self,
-        server_id: str,
-        response_time: float,
-        success: bool = True
+        self, server_id: str, response_time: float, success: bool = True
     ) -> None:
         """Record request metrics."""
         if server_id in self.metrics:
@@ -197,7 +193,7 @@ class WeightedRoundRobinBalancer(LoadBalancer):
         async with self._lock:
             # Initialize weights for new servers
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 if server_id not in self.weights:
                     self.weights[server_id] = 1
                     self.current_weights[server_id] = 0
@@ -208,7 +204,7 @@ class WeightedRoundRobinBalancer(LoadBalancer):
             total_weight = 0
 
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 weight = self.weights[server_id]
                 current_weight = self.current_weights[server_id]
 
@@ -222,7 +218,7 @@ class WeightedRoundRobinBalancer(LoadBalancer):
 
             # Decrease selected server's current weight
             if selected_server:
-                server_id = getattr(selected_server, 'id', str(selected_server))
+                server_id = getattr(selected_server, "id", str(selected_server))
                 self.current_weights[server_id] -= total_weight
 
             return selected_server
@@ -249,7 +245,7 @@ class WeightedRandomBalancer(LoadBalancer):
         # Build weighted list
         weighted_servers = []
         for server in servers:
-            server_id = getattr(server, 'id', str(server))
+            server_id = getattr(server, "id", str(server))
             weight = self.weights.get(server_id, 1)
             weighted_servers.extend([server] * weight)
 
@@ -269,7 +265,7 @@ class AdaptiveBalancer(LoadBalancer):
     def __init__(self, window_size: int = 100) -> None:
         """
         Initialize adaptive balancer.
-        
+
         Args:
             window_size: Size of response time window for averaging
         """
@@ -285,14 +281,14 @@ class AdaptiveBalancer(LoadBalancer):
         async with self._lock:
             # Initialize metrics for new servers
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 if server_id not in self.metrics:
                     self.metrics[server_id] = ServerMetrics(server_id=server_id)
 
             # Calculate scores for each server
             scored_servers = []
             for server in servers:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 metrics = self.metrics[server_id]
 
                 # Skip unhealthy servers
@@ -344,7 +340,7 @@ class AdaptiveBalancer(LoadBalancer):
         for server, score in scored_servers:
             cumulative += score
             if rand_value <= cumulative:
-                server_id = getattr(server, 'id', str(server))
+                server_id = getattr(server, "id", str(server))
                 self.metrics[server_id].last_selected = time.time()
                 return server
 
@@ -352,10 +348,7 @@ class AdaptiveBalancer(LoadBalancer):
         return scored_servers[-1][0]
 
     def record_request(
-        self,
-        server_id: str,
-        response_time: float,
-        success: bool = True
+        self, server_id: str, response_time: float, success: bool = True
     ) -> None:
         """Record request metrics for adaptive balancing."""
         if server_id not in self.metrics:
@@ -390,8 +383,7 @@ class AdaptiveBalancer(LoadBalancer):
     def get_all_metrics(self) -> dict[str, dict[str, Any]]:
         """Get metrics for all servers."""
         return {
-            server_id: self.get_server_metrics(server_id)
-            for server_id in self.metrics
+            server_id: self.get_server_metrics(server_id) for server_id in self.metrics
         }
 
 
@@ -401,7 +393,7 @@ class ConsistentHashBalancer(LoadBalancer):
     def __init__(self, virtual_nodes: int = 150) -> None:
         """
         Initialize consistent hash balancer.
-        
+
         Args:
             virtual_nodes: Number of virtual nodes per server
         """
@@ -417,7 +409,7 @@ class ConsistentHashBalancer(LoadBalancer):
 
         async with self._lock:
             # Update ring if servers changed
-            current_server_ids = {getattr(s, 'id', str(s)) for s in servers}
+            current_server_ids = {getattr(s, "id", str(s)) for s in servers}
             if set(self.servers.keys()) != current_server_ids:
                 await self._rebuild_ring(servers)
 
@@ -434,7 +426,7 @@ class ConsistentHashBalancer(LoadBalancer):
 
         async with self._lock:
             # Update ring if servers changed
-            current_server_ids = {getattr(s, 'id', str(s)) for s in servers}
+            current_server_ids = {getattr(s, "id", str(s)) for s in servers}
             if set(self.servers.keys()) != current_server_ids:
                 await self._rebuild_ring(servers)
 
@@ -449,7 +441,7 @@ class ConsistentHashBalancer(LoadBalancer):
         self.servers.clear()
 
         for server in servers:
-            server_id = getattr(server, 'id', str(server))
+            server_id = getattr(server, "id", str(server))
             self.servers[server_id] = server
 
             # Add virtual nodes for this server
@@ -484,14 +476,14 @@ class LoadBalancerFactory:
     def create(balancer_type: str, **kwargs) -> LoadBalancer:
         """
         Create load balancer instance.
-        
+
         Args:
             balancer_type: Type of load balancer
             **kwargs: Additional configuration
-            
+
         Returns:
             Load balancer instance
-            
+
         Raises:
             ValueError: If unknown balancer type
         """

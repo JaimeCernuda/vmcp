@@ -28,7 +28,7 @@ from .transports.stdio import StdioTransport
 structlog.configure(
     processors=[
         structlog.processors.TimeStamper(fmt="ISO"),
-        structlog.dev.ConsoleRenderer()
+        structlog.dev.ConsoleRenderer(),
     ],
     logger_factory=structlog.WriteLoggerFactory(),
     wrapper_class=structlog.BoundLogger,
@@ -41,13 +41,16 @@ logger = structlog.get_logger(__name__)
 @dataclass
 class GatewayConfig:
     """Configuration for the vMCP Gateway."""
+
     registry_path: str = "~/.vmcp/registry"
 
-    transports: dict[str, dict[str, Any]] = field(default_factory=lambda: {
-        "stdio": {"enabled": True},
-        "http": {"enabled": False, "port": 3000, "host": "127.0.0.1"},
-        "websocket": {"enabled": False, "port": 3001, "host": "127.0.0.1"}
-    })
+    transports: dict[str, dict[str, Any]] = field(
+        default_factory=lambda: {
+            "stdio": {"enabled": True},
+            "http": {"enabled": False, "port": 3000, "host": "127.0.0.1"},
+            "websocket": {"enabled": False, "port": 3001, "host": "127.0.0.1"},
+        }
+    )
 
     # Cache configuration
     cache_enabled: bool = True
@@ -85,7 +88,9 @@ class GatewayConfig:
         # Validate transport configuration
         for transport_name, config in self.transports.items():
             if not isinstance(config, dict):
-                raise ConfigurationError(f"Invalid transport config for {transport_name}")
+                raise ConfigurationError(
+                    f"Invalid transport config for {transport_name}"
+                )
             if "enabled" not in config:
                 config["enabled"] = False
 
@@ -96,7 +101,7 @@ class VMCPGateway:
     def __init__(self, config: GatewayConfig | None = None) -> None:
         """
         Initialize vMCP Gateway.
-        
+
         Args:
             config: Gateway configuration
         """
@@ -141,11 +146,11 @@ class VMCPGateway:
         # Create formatter
         if self.config.log_format == "structured":
             formatter = logging.Formatter(
-                '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+                "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
             )
         else:
             formatter = logging.Formatter(
-                '%(asctime)s [%(levelname)s] %(name)s: %(message)s'
+                "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
             )
 
         # Add console handler
@@ -198,8 +203,7 @@ class VMCPGateway:
             try:
                 if transport_name == "stdio":
                     transport = StdioTransport(
-                        self.handle_request,
-                        self.protocol_handler
+                        self.handle_request, self.protocol_handler
                     )
                     self.transports[transport_name] = transport
                     logger.info("Initialized stdio transport")
@@ -220,9 +224,11 @@ class VMCPGateway:
                     "Failed to initialize transport",
                     transport=transport_name,
                     error=str(e),
-                    exc_info=True
+                    exc_info=True,
                 )
-                raise TransportError(f"Failed to initialize {transport_name} transport: {e}") from e
+                raise TransportError(
+                    f"Failed to initialize {transport_name} transport: {e}"
+                ) from e
 
     async def start(self) -> None:
         """Start the gateway server."""
@@ -246,10 +252,7 @@ class VMCPGateway:
             transport_tasks = []
             for name, transport in self.transports.items():
                 logger.info("Starting transport", transport=name)
-                task = asyncio.create_task(
-                    transport.start(),
-                    name=f"transport-{name}"
-                )
+                task = asyncio.create_task(transport.start(), name=f"transport-{name}")
                 transport_tasks.append(task)
                 self._tasks.append(task)
 
@@ -284,23 +287,18 @@ class VMCPGateway:
         # Health monitoring task
         if self.health_checker:
             task = asyncio.create_task(
-                self._health_monitor_loop(),
-                name="health-monitor"
+                self._health_monitor_loop(), name="health-monitor"
             )
             self._tasks.append(task)
 
         # Metrics collection task
         task = asyncio.create_task(
-            self._metrics_collection_loop(),
-            name="metrics-collector"
+            self._metrics_collection_loop(), name="metrics-collector"
         )
         self._tasks.append(task)
 
         # Cleanup task
-        task = asyncio.create_task(
-            self._cleanup_loop(),
-            name="cleanup"
-        )
+        task = asyncio.create_task(self._cleanup_loop(), name="cleanup")
         self._tasks.append(task)
 
     async def stop(self) -> None:
@@ -344,10 +342,10 @@ class VMCPGateway:
     async def handle_request(self, request: dict[str, Any]) -> dict[str, Any] | None:
         """
         Handle incoming request from transport.
-        
+
         Args:
             request: JSON-RPC request
-            
+
         Returns:
             JSON-RPC response or None for notifications
         """
@@ -365,7 +363,7 @@ class VMCPGateway:
             return self.protocol_handler.create_error_response(
                 request_id,
                 429,  # Too Many Requests
-                "Rate limit exceeded"
+                "Rate limit exceeded",
             )
 
         # Request validation
@@ -377,7 +375,7 @@ class VMCPGateway:
                 return self.protocol_handler.create_error_response(
                     request_id,
                     -32600,  # Invalid Request
-                    f"Invalid request: {e}"
+                    f"Invalid request: {e}",
                 )
 
         # Handle vMCP extension methods
@@ -393,7 +391,7 @@ class VMCPGateway:
                 await self.metrics_collector.record_request(
                     method,
                     success=True,  # Will be updated on completion
-                    cached=False   # Will be updated if cached
+                    cached=False,  # Will be updated if cached
                 )
 
                 # Route request
@@ -410,19 +408,16 @@ class VMCPGateway:
                     method=method,
                     request_id=request_id,
                     error=str(e),
-                    exc_info=True
+                    exc_info=True,
                 )
 
                 # Record failed request
-                await self.metrics_collector.record_request(
-                    method,
-                    success=False
-                )
+                await self.metrics_collector.record_request(method, success=False)
 
                 return self.protocol_handler.create_error_response(
                     request_id,
                     -32603,  # Internal Error
-                    "Internal server error"
+                    "Internal server error",
                 )
 
             finally:
@@ -460,7 +455,9 @@ class VMCPGateway:
                     for state in self.registry.get_all_servers()
                 ]
 
-                return self.protocol_handler.create_response(request_id, result={"servers": servers})
+                return self.protocol_handler.create_response(
+                    request_id, result={"servers": servers}
+                )
 
             elif method == "vmcp/servers/info":
                 params = request.get("params", {})
@@ -477,11 +474,15 @@ class VMCPGateway:
                         request_id, -32602, f"Server not found: {server_id}"
                     )
 
-                return self.protocol_handler.create_response(request_id, result=server_info)
+                return self.protocol_handler.create_response(
+                    request_id, result=server_info
+                )
 
             elif method == "vmcp/servers/health":
                 health_data = await self.health_checker.check_health()
-                return self.protocol_handler.create_response(request_id, result=health_data)
+                return self.protocol_handler.create_response(
+                    request_id, result=health_data
+                )
 
             elif method == "vmcp/cache/clear":
                 self.router.clear_route_cache()
@@ -501,7 +502,9 @@ class VMCPGateway:
                     "active_requests": self._active_requests,
                 }
 
-                return self.protocol_handler.create_response(request_id, result=combined_metrics)
+                return self.protocol_handler.create_response(
+                    request_id, result=combined_metrics
+                )
 
             else:
                 return self.protocol_handler.create_error_response(
@@ -509,7 +512,9 @@ class VMCPGateway:
                 )
 
         except Exception as e:
-            logger.error("vMCP method error", method=method, error=str(e), exc_info=True)
+            logger.error(
+                "vMCP method error", method=method, error=str(e), exc_info=True
+            )
             return self.protocol_handler.create_error_response(
                 request_id, -32603, f"vMCP method error: {e}"
             )
@@ -532,7 +537,9 @@ class VMCPGateway:
 
                     # Log health issues
                     if health_data["status"] != "healthy":
-                        logger.warning("System health degraded", health=health_data["status"])
+                        logger.warning(
+                            "System health degraded", health=health_data["status"]
+                        )
 
             except asyncio.CancelledError:
                 break
@@ -550,15 +557,23 @@ class VMCPGateway:
                 await asyncio.sleep(60)  # Collect metrics every minute
 
                 # Update gateway metrics
-                await self.metrics_collector.update_gauge("active_requests", self._active_requests)
-                await self.metrics_collector.update_gauge("transport_count", len(self.transports))
+                await self.metrics_collector.update_gauge(
+                    "active_requests", self._active_requests
+                )
+                await self.metrics_collector.update_gauge(
+                    "transport_count", len(self.transports)
+                )
 
                 # Update server metrics
                 healthy_servers = len(self.registry.get_healthy_servers())
                 total_servers = len(self.registry.get_all_servers())
 
-                await self.metrics_collector.update_gauge("servers_healthy", healthy_servers)
-                await self.metrics_collector.update_gauge("servers_total", total_servers)
+                await self.metrics_collector.update_gauge(
+                    "servers_healthy", healthy_servers
+                )
+                await self.metrics_collector.update_gauge(
+                    "servers_total", total_servers
+                )
 
             except asyncio.CancelledError:
                 break
@@ -611,5 +626,5 @@ class VMCPGateway:
                 "max_connections": self.config.max_connections,
                 "request_timeout": self.config.request_timeout,
                 "cache_enabled": self.config.cache_enabled,
-            }
+            },
         }

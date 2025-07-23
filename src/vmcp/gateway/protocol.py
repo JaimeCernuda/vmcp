@@ -23,9 +23,9 @@ REQUEST_SCHEMA = {
         "jsonrpc": {"const": "2.0"},
         "id": {"type": ["string", "number", "null"]},
         "method": {"type": "string", "minLength": 1},
-        "params": {"type": ["object", "array"]}
+        "params": {"type": ["object", "array"]},
     },
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 RESPONSE_SCHEMA = {
@@ -41,16 +41,13 @@ RESPONSE_SCHEMA = {
             "properties": {
                 "code": {"type": "integer"},
                 "message": {"type": "string"},
-                "data": {}
+                "data": {},
             },
-            "additionalProperties": False
-        }
+            "additionalProperties": False,
+        },
     },
-    "oneOf": [
-        {"required": ["result"]},
-        {"required": ["error"]}
-    ],
-    "additionalProperties": False
+    "oneOf": [{"required": ["result"]}, {"required": ["error"]}],
+    "additionalProperties": False,
 }
 
 NOTIFICATION_SCHEMA = {
@@ -59,10 +56,10 @@ NOTIFICATION_SCHEMA = {
     "properties": {
         "jsonrpc": {"const": "2.0"},
         "method": {"type": "string", "minLength": 1},
-        "params": {"type": ["object", "array"]}
+        "params": {"type": ["object", "array"]},
     },
     "not": {"required": ["id"]},
-    "additionalProperties": False
+    "additionalProperties": False,
 }
 
 
@@ -76,20 +73,20 @@ class ProtocolHandler:
     def parse_message(self, raw_message: str | bytes) -> dict[str, Any]:
         """
         Parse raw message into JSON-RPC structure.
-        
+
         Args:
             raw_message: Raw message string or bytes
-            
+
         Returns:
             Parsed JSON-RPC message
-            
+
         Raises:
             InvalidMessageError: If message is invalid
         """
         try:
             # Handle bytes input
             if isinstance(raw_message, bytes):
-                raw_message = raw_message.decode('utf-8')
+                raw_message = raw_message.decode("utf-8")
 
             # Parse JSON
             message = json.loads(raw_message)
@@ -101,10 +98,7 @@ class ProtocolHandler:
 
         except json.JSONDecodeError as e:
             logger.warning(f"JSON parse error: {e}")
-            raise InvalidMessageError(
-                f"Invalid JSON: {e}",
-                validation_errors=[str(e)]
-            )
+            raise InvalidMessageError(f"Invalid JSON: {e}", validation_errors=[str(e)])
         except Exception as e:
             logger.error(f"Message parse error: {e}")
             raise InvalidMessageError(f"Failed to parse message: {e}")
@@ -112,10 +106,10 @@ class ProtocolHandler:
     def validate_message(self, message: dict[str, Any]) -> None:
         """
         Validate JSON-RPC message structure.
-        
+
         Args:
             message: Message to validate
-            
+
         Raises:
             InvalidMessageError: If message is invalid
         """
@@ -136,20 +130,19 @@ class ProtocolHandler:
         except ValidationError as e:
             logger.warning(f"Message validation error: {e.message}")
             raise InvalidMessageError(
-                "Invalid message structure",
-                validation_errors=[e.message]
+                "Invalid message structure", validation_errors=[e.message]
             )
 
     def serialize_message(self, message: dict[str, Any]) -> str:
         """
         Serialize message to JSON-RPC format.
-        
+
         Args:
             message: Message to serialize
-            
+
         Returns:
             Serialized JSON string
-            
+
         Raises:
             ProtocolError: If serialization fails
         """
@@ -162,7 +155,7 @@ class ProtocolHandler:
             self.validate_message(message)
 
             # Serialize with consistent formatting
-            return json.dumps(message, separators=(',', ':'), ensure_ascii=False)
+            return json.dumps(message, separators=(",", ":"), ensure_ascii=False)
 
         except Exception as e:
             logger.error(f"Message serialization error: {e}")
@@ -172,23 +165,20 @@ class ProtocolHandler:
         self,
         method: str,
         params: dict[str, Any] | list[Any] | None = None,
-        request_id: str | int | None = None
+        request_id: str | int | None = None,
     ) -> dict[str, Any]:
         """
         Create a JSON-RPC request message.
-        
+
         Args:
             method: Method name
             params: Parameters (optional)
             request_id: Request ID (optional, creates notification if None)
-            
+
         Returns:
             JSON-RPC request message
         """
-        message = {
-            "jsonrpc": self.supported_version,
-            "method": method
-        }
+        message = {"jsonrpc": self.supported_version, "method": method}
 
         if params is not None:
             message["params"] = params
@@ -202,19 +192,19 @@ class ProtocolHandler:
         self,
         request_id: str | int | None,
         result: Any | None = None,
-        error: dict[str, Any] | None = None
+        error: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Create a JSON-RPC response message.
-        
+
         Args:
             request_id: Request ID from original request
             result: Result data (mutually exclusive with error)
             error: Error data (mutually exclusive with result)
-            
+
         Returns:
             JSON-RPC response message
-            
+
         Raises:
             ProtocolError: If both result and error are provided
         """
@@ -224,10 +214,7 @@ class ProtocolHandler:
         if result is None and error is None:
             raise ProtocolError("Must provide either result or error")
 
-        message = {
-            "jsonrpc": self.supported_version,
-            "id": request_id
-        }
+        message = {"jsonrpc": self.supported_version, "id": request_id}
 
         if result is not None:
             message["result"] = result
@@ -241,24 +228,21 @@ class ProtocolHandler:
         request_id: str | int | None,
         code: int,
         message: str,
-        data: dict[str, Any] | None = None
+        data: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         """
         Create a JSON-RPC error response.
-        
+
         Args:
             request_id: Request ID from original request
             code: Error code
             message: Error message
             data: Additional error data (optional)
-            
+
         Returns:
             JSON-RPC error response
         """
-        error = {
-            "code": code,
-            "message": message
-        }
+        error = {"code": code, "message": message}
 
         if data is not None:
             error["data"] = data
@@ -268,13 +252,13 @@ class ProtocolHandler:
     def extract_method(self, message: dict[str, Any]) -> str:
         """
         Extract method name from request message.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             Method name
-            
+
         Raises:
             ProtocolError: If message has no method
         """
@@ -283,13 +267,15 @@ class ProtocolHandler:
             raise ProtocolError("Message has no method field")
         return method
 
-    def extract_params(self, message: dict[str, Any]) -> dict[str, Any] | list[Any] | None:
+    def extract_params(
+        self, message: dict[str, Any]
+    ) -> dict[str, Any] | list[Any] | None:
         """
         Extract parameters from request message.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             Parameters or None if not present
         """
@@ -298,10 +284,10 @@ class ProtocolHandler:
     def extract_id(self, message: dict[str, Any]) -> str | int | None:
         """
         Extract ID from message.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             Message ID or None if not present (notification)
         """
@@ -310,10 +296,10 @@ class ProtocolHandler:
     def is_request(self, message: dict[str, Any]) -> bool:
         """
         Check if message is a request.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             True if message is a request
         """
@@ -322,10 +308,10 @@ class ProtocolHandler:
     def is_notification(self, message: dict[str, Any]) -> bool:
         """
         Check if message is a notification.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             True if message is a notification
         """
@@ -334,10 +320,10 @@ class ProtocolHandler:
     def is_response(self, message: dict[str, Any]) -> bool:
         """
         Check if message is a response.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             True if message is a response
         """
@@ -346,10 +332,10 @@ class ProtocolHandler:
     def is_error_response(self, message: dict[str, Any]) -> bool:
         """
         Check if message is an error response.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             True if message is an error response
         """
@@ -358,10 +344,10 @@ class ProtocolHandler:
     def is_success_response(self, message: dict[str, Any]) -> bool:
         """
         Check if message is a success response.
-        
+
         Args:
             message: JSON-RPC message
-            
+
         Returns:
             True if message is a success response
         """

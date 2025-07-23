@@ -66,7 +66,7 @@ class TestVMCPError:
             VMCPErrorCode.ROUTING_FAILED,
             "Routing failed",
             details=details,
-            server_id="test-server"
+            server_id="test-server",
         )
 
         assert error.code == VMCPErrorCode.ROUTING_FAILED
@@ -86,9 +86,7 @@ class TestVMCPError:
     def test_error_with_server_id_in_string(self):
         """Test error string includes server ID when present."""
         error = VMCPError(
-            VMCPErrorCode.SERVER_UNAVAILABLE,
-            "Server down",
-            server_id="test-server"
+            VMCPErrorCode.SERVER_UNAVAILABLE, "Server down", server_id="test-server"
         )
         error_str = str(error)
 
@@ -175,7 +173,7 @@ class TestJSONRPCErrorResponse:
         response = create_json_rpc_error_response(
             request_id=1,
             code=VMCPErrorCode.METHOD_NOT_FOUND,
-            message="Method not found"
+            message="Method not found",
         )
 
         assert response["jsonrpc"] == "2.0"
@@ -191,7 +189,7 @@ class TestJSONRPCErrorResponse:
             request_id="test-id",
             code=VMCPErrorCode.METHOD_NOT_FOUND,
             message="Method not found",
-            data=error_data
+            data=error_data,
         )
 
         assert response["jsonrpc"] == "2.0"
@@ -203,9 +201,7 @@ class TestJSONRPCErrorResponse:
     def test_create_error_response_null_id(self):
         """Test creating JSON-RPC error response with null ID."""
         response = create_json_rpc_error_response(
-            request_id=None,
-            code=VMCPErrorCode.PARSE_ERROR,
-            message="Parse error"
+            request_id=None, code=VMCPErrorCode.PARSE_ERROR, message="Parse error"
         )
 
         assert response["jsonrpc"] == "2.0"
@@ -224,11 +220,10 @@ class TestJSONRPCErrorResponse:
             data={
                 "server_id": vmcp_error.server_id,
                 "reason": vmcp_error.reason,
-                "details": vmcp_error.details
-            } if vmcp_error.details else {
-                "server_id": vmcp_error.server_id,
-                "reason": vmcp_error.reason
+                "details": vmcp_error.details,
             }
+            if vmcp_error.details
+            else {"server_id": vmcp_error.server_id, "reason": vmcp_error.reason},
         )
 
         assert response["jsonrpc"] == "2.0"
@@ -295,4 +290,6 @@ class TestErrorCodeMapping:
         ]
 
         for error, expected_code in test_cases:
-            assert error.code == expected_code, f"Error {type(error).__name__} has wrong code"
+            assert error.code == expected_code, (
+                f"Error {type(error).__name__} has wrong code"
+            )
