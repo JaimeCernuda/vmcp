@@ -11,7 +11,7 @@
 
 vMCP provides a Virtual File System-like abstraction layer that aggregates multiple MCP servers through a single interface, enabling seamless access to diverse tools and capabilities from scientific computing, data analysis, and more.
 
-## < What is vMCP?
+## 🔗 What is vMCP?
 
 vMCP (Virtual Model Context Protocol) is a **gateway and proxy system** that:
 
@@ -23,7 +23,7 @@ vMCP (Virtual Model Context Protocol) is a **gateway and proxy system** that:
 
 Think of vMCP as a "package manager for MCP servers" with a unified gateway interface.
 
-## =� Quick Start
+## 🚀 Quick Start
 
 ### Prerequisites
 
@@ -34,7 +34,7 @@ Think of vMCP as a "package manager for MCP servers" with a unified gateway inte
 
 ```bash
 # Clone and install
-git clone https://github.com/jcernuda/vmcp.git
+git clone https://github.com/JaimeCernuda/vmcp.git
 cd vmcp
 uv sync --all-extras
 
@@ -59,7 +59,7 @@ uv run vmcp start
 # and access all enabled extensions through the unified interface
 ```
 
-## =� Available Extensions
+## 📦 Available Extensions
 
 vMCP comes with 14 pre-packaged scientific computing extensions:
 
@@ -80,7 +80,7 @@ vMCP comes with 14 pre-packaged scientific computing extensions:
 | **lmod-mcp** | Environment | Environment module management |
 | **parquet-mcp** | Data Management | Columnar data processing |
 
-## <� System Architecture
+## 🏗️ System Architecture
 
 ```mermaid
 graph TB
@@ -110,7 +110,7 @@ graph TB
 - **Routing Engine**: Routes requests to appropriate MCP servers
 - **Persona System**: Access control and tool restrictions (planned)
 
-## =� Tutorial & Commands
+## 📖 Tutorial & Commands
 
 ### Extension Management
 
@@ -248,7 +248,7 @@ uv run vmcp completion zsh
 uv run vmcp completion bash >> ~/.bashrc
 ```
 
-## =' Configuration
+## ⚙️ Configuration
 
 ### Basic Configuration (`vmcp_config.toml`)
 
@@ -297,28 +297,28 @@ To connect Claude Desktop to vMCP, add this to your Claude Desktop MCP configura
 }
 ```
 
-##  What vMCP Can Do
+## ✅ What vMCP Can Do
 
--  **Extension Management**: Install, enable, disable MCP servers like browser extensions
--  **Unified Gateway**: Single stdio interface to access multiple MCP servers
--  **DXT-Inspired Architecture**: Professional extension packaging and management
--  **Rich CLI**: Beautiful, colored command-line interface with tab completion
--  **Repository System**: Centralized extension repository with 14 scientific tools
--  **Configuration Management**: Flexible TOML-based configuration
--  **Health Monitoring**: Monitor extension health and performance
--  **FastMCP Compatibility**: Works with both standard MCP and FastMCP servers
+- ✅ **Extension Management**: Install, enable, disable MCP servers like browser extensions
+- ✅ **Unified Gateway**: Single stdio interface to access multiple MCP servers
+- ✅ **DXT-Inspired Architecture**: Professional extension packaging and management
+- ✅ **Rich CLI**: Beautiful, colored command-line interface with tab completion
+- ✅ **Repository System**: Centralized extension repository with 14 scientific tools
+- ✅ **Configuration Management**: Flexible TOML-based configuration
+- ✅ **Health Monitoring**: Monitor extension health and performance
+- ✅ **FastMCP Compatibility**: Works with both standard MCP and FastMCP servers
 
-## =� What vMCP Cannot Do Yet
+## ❌ What vMCP Cannot Do Yet
 
-- L **Persona System**: User-based access control (planned)
-- L **Dynamic Loading**: Runtime loading/unloading of extensions (planned)
-- L **HTTP/WebSocket Transports**: Only stdio transport currently supported
-- L **Extension Development Tools**: No scaffolding for creating new extensions
-- L **Remote Repositories**: Only local built-in repository supported
-- L **Extension Dependencies**: No dependency resolution between extensions
-- L **Hot Reload**: Extensions require gateway restart to reload
+- ❌ **Persona System**: User-based access control (planned)
+- ❌ **Dynamic Loading**: Runtime loading/unloading of extensions (planned)
+- ❌ **HTTP/WebSocket Transports**: Only stdio transport currently supported
+- ❌ **Extension Development Tools**: No scaffolding for creating new extensions
+- ❌ **Remote Repositories**: Only local built-in repository supported
+- ❌ **Extension Dependencies**: No dependency resolution between extensions
+- ❌ **Hot Reload**: Extensions require gateway restart to reload
 
-## =� Development
+## 🛠️ Development
 
 ### Running Tests
 
@@ -351,13 +351,13 @@ uv run mypy src/vmcp
 
 The project includes comprehensive CI/CD:
 
--  Multi-Python version testing (3.10, 3.11, 3.12)
--  Code formatting and linting
--  Type checking
--  Security auditing
--  Package building
+- ✅ Multi-Python version testing (3.10, 3.11, 3.12)
+- ✅ Code formatting and linting
+- ✅ Type checking
+- ✅ Security auditing
+- ✅ Package building
 
-## =� Technical Details
+## 🔧 Technical Details
 
 ### Extension Package Format
 
@@ -365,12 +365,12 @@ vMCP uses `.vext` (vMCP Extension) files, similar to DXT's `.dxt` format:
 
 ```
 extension.vext
-   manifest.json          # DXT-style manifest
-   src/
-      server.py          # MCP server entry point
-      capabilities/      # Tool implementations
-   tests/                 # Extension tests
-   README.md             # Extension documentation
+├── manifest.json          # DXT-style manifest
+├── src/
+│   ├── server.py          # MCP server entry point
+│   └── capabilities/      # Tool implementations
+├── tests/                 # Extension tests
+└── README.md             # Extension documentation
 ```
 
 ### Manifest Structure
@@ -403,7 +403,7 @@ extension.vext
 }
 ```
 
-## > Contributing
+## 🤝 Contributing
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -413,11 +413,11 @@ extension.vext
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
-## =� License
+## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## =O Acknowledgments
+## 🙏 Acknowledgments
 
 - **[Anthropic](https://anthropic.com)** for the Model Context Protocol specification
 - **[DXT Project](https://github.com/anthropics/dxt)** for extension architecture inspiration  
@@ -425,12 +425,12 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **[uv](https://github.com/astral-sh/uv)** for fast Python package management
 - **[Rich](https://github.com/Textualize/rich)** for beautiful terminal output
 
-## =� Support
+## 📞 Support
 
-- =� Issues: [GitHub Issues](https://github.com/jcernuda/vmcp/issues)
-- =� Documentation: [Project Wiki](https://github.com/jcernuda/vmcp/wiki)
-- =� Discussions: [GitHub Discussions](https://github.com/jcernuda/vmcp/discussions)
+- 🐛 Issues: [GitHub Issues](https://github.com/JaimeCernuda/vmcp/issues)
+- 📖 Documentation: [Project Wiki](https://github.com/JaimeCernuda/vmcp/wiki)
+- 💬 Discussions: [GitHub Discussions](https://github.com/JaimeCernuda/vmcp/discussions)
 
 ---
 
-**Made with d for the MCP community**
+**Made with ❤️ for the MCP community**
