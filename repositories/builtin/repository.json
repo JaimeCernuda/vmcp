@@ -1,0 +1,145 @@
+{
+  "$schema": "https://vmcp.dev/schemas/repository.json",
+  "repository": {
+    "id": "builtin",
+    "name": "Built-in vMCP Repository",
+    "description": "Default repository containing core MCP servers for scientific computing and data analysis",
+    "version": "0.1.0",
+    "publisher": "vMCP Team",
+    "contact": "team@vmcp.dev",
+    "homepage": "https://github.com/iowarp/iowarp-mcps",
+    "repository": "https://github.com/iowarp/iowarp-mcps",
+    "license": "MIT"
+  },
+  "metadata": {
+    "created": "2025-01-23T16:00:00Z",
+    "updated": "2025-01-23T16:30:00Z",
+    "extension_count": 14,
+    "categories": [
+      "scientific-computing",
+      "data-analysis",
+      "hpc",
+      "visualization",
+      "system-monitoring"
+    ]
+  },
+  "settings": {
+    "auto_update": false,
+    "trusted": true,
+    "priority": 100
+  },
+  "extensions": [
+    {
+      "id": "adios-mcp",
+      "name": "ADIOS MCP Server",
+      "version": "0.1.0",
+      "file": "adios-mcp.vext",
+      "category": "scientific-computing",
+      "size": "5.0MB"
+    },
+    {
+      "id": "arxiv-mcp",
+      "name": "ArXiv MCP Server",
+      "version": "0.1.0",
+      "file": "arxiv-mcp.vext",
+      "category": "research",
+      "size": "0.1MB"
+    },
+    {
+      "id": "chronolog-mcp",
+      "name": "Chronolog MCP Server",
+      "version": "0.1.0",
+      "file": "chronolog-mcp.vext",
+      "category": "data-management",
+      "size": "0.3MB"
+    },
+    {
+      "id": "compression-mcp",
+      "name": "Compression MCP Server",
+      "version": "0.1.0",
+      "file": "compression-mcp.vext",
+      "category": "data-processing",
+      "size": "0.1MB"
+    },
+    {
+      "id": "darshan-mcp",
+      "name": "Darshan MCP Server",
+      "version": "0.1.0",
+      "file": "darshan-mcp.vext",
+      "category": "performance",
+      "size": "0.1MB"
+    },
+    {
+      "id": "hdf5-mcp",
+      "name": "HDF5 MCP Server",
+      "version": "0.1.0",
+      "file": "hdf5-mcp.vext",
+      "category": "data-management",
+      "size": "0.1MB"
+    },
+    {
+      "id": "jarvis-mcp",
+      "name": "JARVIS MCP Server",
+      "version": "0.1.0",
+      "file": "jarvis-mcp.vext",
+      "category": "materials-science",
+      "size": "0.8MB"
+    },
+    {
+      "id": "node-hardware-mcp",
+      "name": "Node Hardware MCP Server",
+      "version": "0.1.0",
+      "file": "node-hardware-mcp.vext",
+      "category": "system-monitoring",
+      "size": "0.1MB"
+    },
+    {
+      "id": "pandas-mcp",
+      "name": "Pandas MCP Server",
+      "version": "0.1.0",
+      "file": "pandas-mcp.vext",
+      "category": "data-analysis",
+      "size": "0.2MB"
+    },
+    {
+      "id": "parallel-sort-mcp",
+      "name": "Parallel Sort MCP Server",
+      "version": "0.1.0",
+      "file": "parallel-sort-mcp.vext",
+      "category": "data-processing",
+      "size": "0.1MB"
+    },
+    {
+      "id": "plot-mcp",
+      "name": "Plot MCP Server",
+      "version": "0.1.0",
+      "file": "plot-mcp.vext",
+      "category": "visualization",
+      "size": "0.7MB"
+    },
+    {
+      "id": "slurm-mcp",
+      "name": "SLURM MCP Server",
+      "version": "0.1.0",
+      "file": "slurm-mcp.vext",
+      "category": "job-scheduling",
+      "size": "0.1MB"
+    },
+    {
+      "id": "lmod-mcp",
+      "name": "LMOD MCP Server",
+      "version": "0.1.0",
+      "file": "lmod-mcp.vext",
+      "category": "environment",
+      "size": "0.0MB"
+    },
+    {
+      "id": "parquet-mcp",
+      "name": "Parquet MCP Server",
+      "version": "0.1.0",
+      "file": "parquet-mcp.vext",
+      "category": "data-management",
+      "size": "1.3MB"
+    }
+  ]
+}

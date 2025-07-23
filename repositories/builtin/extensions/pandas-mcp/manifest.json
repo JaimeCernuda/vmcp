@@ -1,0 +1,81 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "pandas-mcp",
+  "display_name": "Pandas MCP Server",
+  "version": "0.1.0",
+  "description": "Data analysis and manipulation with pandas",
+  "long_description": "Comprehensive data analysis toolkit using pandas. Provides data profiling, cleaning, transformation, and statistical analysis capabilities for structured data.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/pandas-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "pandas",
+    "data-analysis",
+    "dataframes",
+    "statistics"
+  ],
+  "tools": [
+    {
+      "name": "data_profiling",
+      "description": "Profile datasets and generate summary statistics"
+    },
+    {
+      "name": "data_cleaning",
+      "description": "Clean and preprocess data"
+    },
+    {
+      "name": "transformations",
+      "description": "Apply data transformations and operations"
+    },
+    {
+      "name": "statistics",
+      "description": "Compute statistical measures and analyses"
+    },
+    {
+      "name": "time_series",
+      "description": "Time series analysis and operations"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

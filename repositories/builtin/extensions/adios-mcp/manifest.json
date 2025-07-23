@@ -1,0 +1,78 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "adios-mcp",
+  "display_name": "ADIOS MCP Server",
+  "version": "0.1.0",
+  "description": "Read-only MCP server for ADIOS datasets",
+  "long_description": "Enables LLMs to query scientific simulation and real-time data through ADIOS2 Python API. Provides tools for listing files, inspecting variables, and retrieving data slices without modifying source data.",
+  "author": {
+    "name": "Soham Sonar",
+    "email": "ssonar2@hawk.iit.edu"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/adios-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "adios",
+    "simulation",
+    "scientific-data",
+    "hdf5",
+    "bp5"
+  ],
+  "tools": [
+    {
+      "name": "bp5_list",
+      "description": "List available BP5 files and datasets"
+    },
+    {
+      "name": "bp5_attributes",
+      "description": "Get attributes from BP5 files"
+    },
+    {
+      "name": "bp5_inspect_variables",
+      "description": "Inspect variables in BP5 datasets"
+    },
+    {
+      "name": "bp5_read_variable_at_step",
+      "description": "Read variable data at specific time step"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

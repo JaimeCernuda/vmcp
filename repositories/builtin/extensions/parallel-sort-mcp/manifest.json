@@ -1,0 +1,81 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "parallel-sort-mcp",
+  "display_name": "Parallel Sort MCP Server",
+  "version": "0.1.0",
+  "description": "High-performance parallel sorting algorithms",
+  "long_description": "High-performance parallel sorting with advanced filtering, pattern detection, and export capabilities. Optimized for large datasets using multiprocessing.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/parallel-sort-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "sorting",
+    "parallel",
+    "performance",
+    "multiprocessing"
+  ],
+  "tools": [
+    {
+      "name": "parallel_sort",
+      "description": "Sort data using parallel algorithms"
+    },
+    {
+      "name": "filter_data",
+      "description": "Filter datasets with various criteria"
+    },
+    {
+      "name": "export_results",
+      "description": "Export processed results in multiple formats"
+    },
+    {
+      "name": "statistics",
+      "description": "Compute statistics on sorted data"
+    },
+    {
+      "name": "pattern_detection",
+      "description": "Detect patterns in sorted datasets"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

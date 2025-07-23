@@ -1,0 +1,90 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "node-hardware-mcp",
+  "display_name": "Node Hardware MCP Server",
+  "version": "0.1.0",
+  "description": "System hardware monitoring and information",
+  "long_description": "Comprehensive system hardware monitoring including CPU, memory, disk, GPU, and network information. Provides real-time performance metrics and system health data.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/node-hardware-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "hardware",
+    "monitoring",
+    "system",
+    "performance",
+    "psutil"
+  ],
+  "tools": [
+    {
+      "name": "cpu_info",
+      "description": "Get CPU information and usage"
+    },
+    {
+      "name": "memory_info",
+      "description": "Get memory usage and statistics"
+    },
+    {
+      "name": "disk_info",
+      "description": "Get disk usage and I/O statistics"
+    },
+    {
+      "name": "gpu_info",
+      "description": "Get GPU information and usage"
+    },
+    {
+      "name": "network_info",
+      "description": "Get network interface information"
+    },
+    {
+      "name": "system_info",
+      "description": "Get general system information"
+    },
+    {
+      "name": "performance_monitor",
+      "description": "Monitor system performance metrics"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/node_hardware/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "hdf5-mcp",
+  "display_name": "HDF5 MCP Server",
+  "version": "0.1.0",
+  "description": "HDF5 file operations and data access",
+  "long_description": "Comprehensive HDF5 file operations including listing, inspection, preview, and data reading. Built on h5py for robust scientific data access.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/hdf5-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "hdf5",
+    "scientific-data",
+    "file-format",
+    "h5py"
+  ],
+  "tools": [
+    {
+      "name": "hdf5_list",
+      "description": "List contents of HDF5 files"
+    },
+    {
+      "name": "inspect_hdf5",
+      "description": "Inspect HDF5 file structure and metadata"
+    },
+    {
+      "name": "preview_hdf5",
+      "description": "Preview HDF5 dataset contents"
+    },
+    {
+      "name": "read_all_hdf5",
+      "description": "Read complete HDF5 datasets"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/mcp_server/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

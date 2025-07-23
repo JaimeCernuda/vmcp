@@ -1,0 +1,69 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "darshan-mcp",
+  "display_name": "Darshan MCP Server",
+  "version": "0.1.0",
+  "description": "I/O profiling and analysis for HPC applications",
+  "long_description": "Provides comprehensive I/O profiling analysis using Darshan logs. Helps identify performance bottlenecks and optimize I/O patterns in HPC applications.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/darshan-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "darshan",
+    "io-profiling",
+    "hpc",
+    "performance"
+  ],
+  "tools": [
+    {
+      "name": "parse_darshan_log",
+      "description": "Parse and analyze Darshan log files"
+    },
+    {
+      "name": "analyze_io_patterns",
+      "description": "Analyze I/O access patterns and performance"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/darshan_mcp/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

@@ -1,0 +1,73 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "jarvis-mcp",
+  "display_name": "JARVIS MCP Server",
+  "version": "0.1.0",
+  "description": "Materials science database access",
+  "long_description": "Access to JARVIS (Joint Automated Repository for Various Integrated Simulations) materials database with comprehensive search and analysis capabilities.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/jarvis-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "jarvis",
+    "materials",
+    "database",
+    "science"
+  ],
+  "tools": [
+    {
+      "name": "search_materials",
+      "description": "Search materials in JARVIS database"
+    },
+    {
+      "name": "get_properties",
+      "description": "Get material properties and characteristics"
+    },
+    {
+      "name": "analyze_structure",
+      "description": "Analyze material crystal structures"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/jarvis_mcp/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

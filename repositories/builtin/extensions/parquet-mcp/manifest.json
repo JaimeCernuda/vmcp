@@ -1,0 +1,81 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "parquet-mcp",
+  "display_name": "Parquet MCP Server",
+  "version": "0.1.0",
+  "description": "Parquet file operations and data processing",
+  "long_description": "High-performance Parquet file operations with comprehensive data processing capabilities. Built on PyArrow for efficient columnar data access.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/parquet-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "parquet",
+    "pyarrow",
+    "columnar",
+    "data-processing"
+  ],
+  "tools": [
+    {
+      "name": "read_parquet",
+      "description": "Read Parquet files and datasets"
+    },
+    {
+      "name": "write_parquet",
+      "description": "Write data to Parquet format"
+    },
+    {
+      "name": "compress_data",
+      "description": "Compress data with various algorithms"
+    },
+    {
+      "name": "sort_data",
+      "description": "Sort Parquet datasets"
+    },
+    {
+      "name": "pandas_operations",
+      "description": "Perform pandas operations on Parquet data"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

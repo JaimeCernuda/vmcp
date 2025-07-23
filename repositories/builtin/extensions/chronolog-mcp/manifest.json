@@ -1,0 +1,77 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "chronolog-mcp",
+  "display_name": "Chronolog MCP Server",
+  "version": "0.1.0",
+  "description": "Time-series data logging and retrieval",
+  "long_description": "Provides time-series data logging capabilities with efficient storage and retrieval. Integrates with Chronolog system for high-performance time-series operations.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/chronolog-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "chronolog",
+    "time-series",
+    "logging",
+    "data-storage"
+  ],
+  "tools": [
+    {
+      "name": "start_chronolog",
+      "description": "Start Chronolog service"
+    },
+    {
+      "name": "stop_chronolog",
+      "description": "Stop Chronolog service"
+    },
+    {
+      "name": "record_data",
+      "description": "Record time-series data"
+    },
+    {
+      "name": "retrieve_records",
+      "description": "Retrieve stored time-series records"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/chronomcp/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}

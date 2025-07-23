@@ -1,0 +1,78 @@
+{
+  "$schema": "https://vmcp.dev/schemas/manifest.json",
+  "vmcp_version": "0.1.0",
+  "name": "plot-mcp",
+  "display_name": "Plot MCP Server",
+  "version": "0.1.0",
+  "description": "Data visualization and plotting utilities",
+  "long_description": "Comprehensive data visualization toolkit supporting matplotlib, seaborn, and plotly. Create static and interactive plots with extensive customization options.",
+  "author": {
+    "name": "iowarp-mcps team",
+    "email": "team@iowarp.org"
+  },
+  "repository": "https://github.com/iowarp/iowarp-mcps",
+  "homepage": "https://github.com/iowarp/iowarp-mcps",
+  "documentation": "https://github.com/iowarp/iowarp-mcps/tree/main/mcps/plot-mcp",
+  "support": "https://github.com/iowarp/iowarp-mcps/issues",
+  "license": "MIT",
+  "keywords": [
+    "plotting",
+    "visualization",
+    "matplotlib",
+    "seaborn",
+    "plotly"
+  ],
+  "tools": [
+    {
+      "name": "create_plot",
+      "description": "Create various types of plots and charts"
+    },
+    {
+      "name": "save_plot",
+      "description": "Save plots in multiple formats"
+    },
+    {
+      "name": "plot_timeseries",
+      "description": "Create time series visualizations"
+    },
+    {
+      "name": "statistical_plots",
+      "description": "Generate statistical plots and distributions"
+    }
+  ],
+  "server": {
+    "type": "python",
+    "mcp": {
+      "command": "uv",
+      "args": [
+        "run",
+        "--directory",
+        "{EXTENSION_DIR}",
+        "python",
+        "src/server.py"
+      ],
+      "env": {}
+    }
+  },
+  "compatibility": {
+    "vmcp": ">=0.1.0",
+    "platforms": [
+      "linux",
+      "macos",
+      "windows"
+    ],
+    "python": ">=3.10"
+  },
+  "user_config": {
+    "debug_mode": {
+      "type": "boolean",
+      "default": false,
+      "description": "Enable debug logging"
+    },
+    "max_results": {
+      "type": "integer",
+      "default": 100,
+      "description": "Maximum number of results to return"
+    }
+  }
+}
