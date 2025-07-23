@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
   pull_request:
-    branches: [ main, develop ]
+    branches: [ master, main, develop ]
 
 jobs:
   test:
@@ -39,15 +39,34 @@ jobs:
       run: |
         uv run mypy src/vmcp --ignore-missing-imports
 
-    - name: Test with pytest
+    - name: Test with pytest and coverage
       run: |
-        uv run pytest tests/ -v --tb=short
+        uv run pytest tests/ -v --tb=short --cov=src/vmcp --cov-report=xml --cov-report=html --cov-report=term
+
+    - name: Upload coverage to Codecov
+      uses: codecov/codecov-action@v4
+      if: matrix.python-version == '3.12'
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+        token: ${{ secrets.CODECOV_TOKEN }}
+
+    - name: Upload coverage HTML report
+      uses: actions/upload-artifact@v4
+      if: matrix.python-version == '3.12'
+      with:
+        name: coverage-html-report
+        path: htmlcov/
 
     - name: Test CLI commands
       run: |
         uv run vmcp --help
+        uv run vmcp status
         uv run vmcp config init --output /tmp/test_config.toml
-        uv run vmcp info
+        uv run vmcp extension list
+        uv run vmcp completion bash > /dev/null
 
   security:
     runs-on: ubuntu-latest

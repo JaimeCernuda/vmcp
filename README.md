@@ -1,7 +1,10 @@
 # vMCP - Virtual Model Context Protocol
 
+[![CI](https://github.com/JaimeCernuda/vmcp/actions/workflows/ci.yml/badge.svg)](https://github.com/JaimeCernuda/vmcp/actions/workflows/ci.yml)
+[![codecov](https://codecov.io/gh/JaimeCernuda/vmcp/branch/master/graph/badge.svg)](https://codecov.io/gh/JaimeCernuda/vmcp)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Code style: ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![uv](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/uv/main/assets/badge/v0.json)](https://github.com/astral-sh/uv)
 
 > **A unified gateway for Model Context Protocol (MCP) servers, inspired by the DXT (Desktop Extensions) specification**
@@ -20,7 +23,7 @@ vMCP (Virtual Model Context Protocol) is a **gateway and proxy system** that:
 
 Think of vMCP as a "package manager for MCP servers" with a unified gateway interface.
 
-## =€ Quick Start
+## =ï¿½ Quick Start
 
 ### Prerequisites
 
@@ -56,7 +59,7 @@ uv run vmcp start
 # and access all enabled extensions through the unified interface
 ```
 
-## =æ Available Extensions
+## =ï¿½ Available Extensions
 
 vMCP comes with 14 pre-packaged scientific computing extensions:
 
@@ -77,7 +80,7 @@ vMCP comes with 14 pre-packaged scientific computing extensions:
 | **lmod-mcp** | Environment | Environment module management |
 | **parquet-mcp** | Data Management | Columnar data processing |
 
-## <¯ System Architecture
+## <ï¿½ System Architecture
 
 ```mermaid
 graph TB
@@ -107,7 +110,7 @@ graph TB
 - **Routing Engine**: Routes requests to appropriate MCP servers
 - **Persona System**: Access control and tool restrictions (planned)
 
-## =Ú Tutorial & Commands
+## =ï¿½ Tutorial & Commands
 
 ### Extension Management
 
@@ -305,7 +308,7 @@ To connect Claude Desktop to vMCP, add this to your Claude Desktop MCP configura
 -  **Health Monitoring**: Monitor extension health and performance
 -  **FastMCP Compatibility**: Works with both standard MCP and FastMCP servers
 
-## =§ What vMCP Cannot Do Yet
+## =ï¿½ What vMCP Cannot Do Yet
 
 - L **Persona System**: User-based access control (planned)
 - L **Dynamic Loading**: Runtime loading/unloading of extensions (planned)
@@ -315,7 +318,7 @@ To connect Claude Desktop to vMCP, add this to your Claude Desktop MCP configura
 - L **Extension Dependencies**: No dependency resolution between extensions
 - L **Hot Reload**: Extensions require gateway restart to reload
 
-## =à Development
+## =ï¿½ Development
 
 ### Running Tests
 
@@ -354,7 +357,7 @@ The project includes comprehensive CI/CD:
 -  Security auditing
 -  Package building
 
-## =Ö Technical Details
+## =ï¿½ Technical Details
 
 ### Extension Package Format
 
@@ -410,7 +413,7 @@ extension.vext
 6. Push to the branch (`git push origin feature/amazing-feature`)
 7. Open a Pull Request
 
-## =Ä License
+## =ï¿½ License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
@@ -422,11 +425,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - **[uv](https://github.com/astral-sh/uv)** for fast Python package management
 - **[Rich](https://github.com/Textualize/rich)** for beautiful terminal output
 
-## =Þ Support
+## =ï¿½ Support
 
-- =ç Issues: [GitHub Issues](https://github.com/jcernuda/vmcp/issues)
-- =Ö Documentation: [Project Wiki](https://github.com/jcernuda/vmcp/wiki)
-- =¬ Discussions: [GitHub Discussions](https://github.com/jcernuda/vmcp/discussions)
+- =ï¿½ Issues: [GitHub Issues](https://github.com/jcernuda/vmcp/issues)
+- =ï¿½ Documentation: [Project Wiki](https://github.com/jcernuda/vmcp/wiki)
+- =ï¿½ Discussions: [GitHub Discussions](https://github.com/jcernuda/vmcp/discussions)
 
 ---
 
