@@ -198,7 +198,7 @@ class HealthChecker:
 
     async def _check_servers(self) -> list[HealthCheck]:
         """Check all registered servers."""
-        checks = []
+        checks: list[HealthCheck] = []
         registry = self.components.get("registry")
 
         if not registry:

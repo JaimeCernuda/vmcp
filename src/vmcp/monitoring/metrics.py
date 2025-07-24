@@ -66,7 +66,7 @@ class MetricsCollector:
         }
 
         # Gauges (current values)
-        self.gauges = {
+        self.gauges: dict[str, float] = {
             "active_requests": 0,
             "active_connections": 0,
             "servers_healthy": 0,
@@ -77,7 +77,7 @@ class MetricsCollector:
         }
 
         # Histograms (for response times)
-        self.histograms = {
+        self.histograms: dict[str, deque[float]] = {
             "response_time": deque(maxlen=1000),
             "request_size": deque(maxlen=1000),
             "response_size": deque(maxlen=1000),
@@ -154,7 +154,7 @@ class MetricsCollector:
             value: New value
         """
         async with self._lock:
-            self.gauges[name] = value
+            self.gauges[name] = float(value)
 
     async def increment_counter(self, name: str, value: int = 1) -> None:
         """

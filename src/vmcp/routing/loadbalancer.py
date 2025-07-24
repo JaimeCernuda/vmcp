@@ -35,7 +35,7 @@ class ServerMetrics:
         """Get average response time."""
         if not self.response_times:
             return 0.0
-        return sum(self.response_times) / len(self.response_times)
+        return float(sum(self.response_times) / len(self.response_times))
 
     @property
     def error_rate(self) -> float:
@@ -382,9 +382,12 @@ class AdaptiveBalancer(LoadBalancer):
 
     def get_all_metrics(self) -> dict[str, dict[str, Any]]:
         """Get metrics for all servers."""
-        return {
-            server_id: self.get_server_metrics(server_id) for server_id in self.metrics
-        }
+        result = {}
+        for server_id in self.metrics:
+            metrics = self.get_server_metrics(server_id)
+            if metrics is not None:
+                result[server_id] = metrics
+        return result
 
 
 class ConsistentHashBalancer(LoadBalancer):
@@ -473,7 +476,7 @@ class LoadBalancerFactory:
     """Factory for creating load balancers."""
 
     @staticmethod
-    def create(balancer_type: str, **kwargs) -> LoadBalancer:
+    def create(balancer_type: str, **kwargs: Any) -> LoadBalancer:
         """
         Create load balancer instance.
 
@@ -501,7 +504,7 @@ class LoadBalancerFactory:
             raise ValueError(f"Unknown balancer type: {balancer_type}")
 
         balancer_class = balancer_classes[balancer_type]
-        return balancer_class(**kwargs)
+        return balancer_class(**kwargs)  # type: ignore[no-any-return]
 
     @staticmethod
     def list_types() -> list[str]:

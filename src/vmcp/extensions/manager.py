@@ -40,7 +40,7 @@ class ExtensionManager:
 
     def list_repositories(self) -> list[dict[str, Any]]:
         """List all available repositories."""
-        repositories = []
+        repositories: list[dict[str, Any]] = []
 
         if not self.repositories_dir.exists():
             return repositories
@@ -81,7 +81,8 @@ class ExtensionManager:
         try:
             with open(repo_manifest) as f:
                 repo_data = json.load(f)
-            return repo_data.get("extensions", [])
+            extensions = repo_data.get("extensions", [])
+            return extensions  # type: ignore[no-any-return]
         except Exception as e:
             raise RepositoryError(
                 f"Failed to load repository {repository_id}: {e}"
@@ -89,7 +90,7 @@ class ExtensionManager:
 
     def list_installed_extensions(self) -> list[dict[str, Any]]:
         """List all installed extensions."""
-        installed = []
+        installed: list[dict[str, Any]] = []
 
         if not self.installed_dir.exists():
             return installed
@@ -347,7 +348,8 @@ class ExtensionManager:
             Dictionary of enabled extensions with their configurations
         """
         enabled_config = self._load_enabled_extensions()
-        return enabled_config.get("enabled", {})
+        enabled = enabled_config.get("enabled", {})
+        return enabled  # type: ignore[no-any-return]
 
     def get_extension_manifest(self, extension_id: str) -> dict[str, Any] | None:
         """
@@ -367,7 +369,8 @@ class ExtensionManager:
 
         try:
             with open(manifest_path) as f:
-                return json.load(f)
+                manifest = json.load(f)
+                return manifest  # type: ignore[no-any-return]
         except Exception as e:
             logger.warning(f"Failed to load manifest for {extension_id}: {e}")
             return None

@@ -47,7 +47,7 @@ class MCPInstaller:
         # Verify UV is available
         if not await self._verify_uv():
             raise InstallationFailedError(
-                "UV package manager not found. Please install UV."
+                "uv", "UV package manager not found. Please install UV."
             )
 
     async def install_server(self, server_info: MCPServerInfo) -> str:
@@ -83,7 +83,7 @@ class MCPInstaller:
                 await self._install_pypi(server_info, install_path)
             else:
                 raise InstallationFailedError(
-                    f"Unsupported source type: {server_info.source_type}"
+                    server_info.id, f"Unsupported source type: {server_info.source_type}"
                 )
 
             # Record installation
@@ -97,7 +97,7 @@ class MCPInstaller:
             if install_path.exists():
                 shutil.rmtree(install_path, ignore_errors=True)
             raise InstallationFailedError(
-                f"Installation failed for {server_id}: {e}"
+                server_id, f"Installation failed for {server_id}: {e}"
             ) from e
 
     async def update_server(self, server_info: MCPServerInfo) -> str:
@@ -114,7 +114,7 @@ class MCPInstaller:
         logger.info(f"Updating MCP server: {server_id}")
 
         if not await self.is_installed(server_id):
-            raise InstallationFailedError(f"Server not installed: {server_id}")
+            raise InstallationFailedError(server_id, f"Server not installed: {server_id}")
 
         install_path = self.install_dir / server_id
 
@@ -128,7 +128,7 @@ class MCPInstaller:
                 await self._update_pypi(server_info, install_path)
             else:
                 raise InstallationFailedError(
-                    f"Unsupported source type: {server_info.source_type}"
+                    server_id, f"Unsupported source type: {server_info.source_type}"
                 )
 
             # Update installation record
@@ -140,7 +140,7 @@ class MCPInstaller:
             return str(install_path)
 
         except Exception as e:
-            raise InstallationFailedError(f"Update failed for {server_id}: {e}") from e
+            raise InstallationFailedError(server_id, f"Update failed for {server_id}: {e}") from e
 
     async def uninstall_server(self, server_id: str) -> bool:
         """
@@ -175,7 +175,7 @@ class MCPInstaller:
 
         except Exception as e:
             logger.error(f"Failed to uninstall {server_id}: {e}")
-            raise InstallationFailedError(f"Uninstallation failed: {e}") from e
+            raise InstallationFailedError(server_id, f"Uninstallation failed: {e}") from e
 
     async def is_installed(self, server_id: str) -> bool:
         """
@@ -291,7 +291,7 @@ class MCPInstaller:
         total_installed = len(self.installations)
 
         # Count by source type
-        source_types = {}
+        source_types: dict[str, int] = {}
         install_dates = []
 
         for metadata in self.installations.values():
@@ -318,14 +318,14 @@ class MCPInstaller:
         source_path = Path(server_info.source_location)
 
         if not source_path.exists():
-            raise InstallationFailedError(f"Source directory not found: {source_path}")
+            raise InstallationFailedError(server_info.id, f"Source directory not found: {source_path}")
 
         # Copy source to installation directory
         if source_path.is_dir():
             # Copy entire directory
             shutil.copytree(source_path, install_path, dirs_exist_ok=True)
         else:
-            raise InstallationFailedError(f"Source is not a directory: {source_path}")
+            raise InstallationFailedError(server_info.id, f"Source is not a directory: {source_path}")
 
         # Install dependencies using UV
         await self._install_dependencies(install_path)
@@ -342,7 +342,7 @@ class MCPInstaller:
         try:
             git.Repo.clone_from(repo_url, install_path)
         except Exception as e:
-            raise InstallationFailedError(f"Git clone failed: {e}") from e
+            raise InstallationFailedError(server_info.id, f"Git clone failed: {e}") from e
 
         # Install dependencies
         await self._install_dependencies(install_path)
@@ -416,7 +416,7 @@ build-backend = "setuptools.build_meta"
 
         if result.returncode != 0:
             raise InstallationFailedError(
-                f"Dependency installation failed: {result.stderr}"
+                "dependencies", f"Dependency installation failed: {result.stderr}"
             )
 
     async def _verify_uv(self) -> bool:
@@ -447,7 +447,7 @@ build-backend = "setuptools.build_meta"
 
             return subprocess.CompletedProcess(
                 args=cmd,
-                returncode=process.returncode,
+                returncode=process.returncode or 0,
                 stdout=stdout.decode() if stdout else "",
                 stderr=stderr.decode() if stderr else "",
             )
@@ -455,7 +455,7 @@ build-backend = "setuptools.build_meta"
         except asyncio.TimeoutError as e:
             process.kill()
             await process.wait()
-            raise InstallationFailedError(f"Command timed out: {' '.join(cmd)}") from e
+            raise InstallationFailedError("command", f"Command timed out: {' '.join(cmd)}") from e
 
     def _record_installation(
         self,

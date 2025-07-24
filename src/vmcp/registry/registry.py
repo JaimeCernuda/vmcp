@@ -347,7 +347,7 @@ class Registry:
         if server_id not in self._servers:
             return None
 
-        pools = await self._pool_manager.get_all_stats()
+        pools = self._pool_manager.get_all_stats()
         if server_id in pools:
             return self._pool_manager._pools.get(server_id)
         return None
@@ -464,7 +464,7 @@ class Registry:
         except Exception as e:
             logger.error(f"Failed to initialize pool for {server_id}: {e}")
 
-    async def _create_server_connection(self, server_id: str):
+    async def _create_server_connection(self, server_id: str) -> Any:
         """Create connection to server."""
         state = self._servers.get(server_id)
         if not state:
@@ -496,13 +496,13 @@ class Registry:
             overall_health = "unhealthy"
 
         # Get transport breakdown
-        transport_counts = {}
+        transport_counts: dict[str, int] = {}
         for state in self._servers.values():
             transport = state.config.transport
             transport_counts[transport] = transport_counts.get(transport, 0) + 1
 
         # Get capability breakdown
-        capability_counts = {}
+        capability_counts: dict[str, int] = {}
         for state in self._servers.values():
             for capability in state.config.capabilities:
                 capability_counts[capability] = capability_counts.get(capability, 0) + 1

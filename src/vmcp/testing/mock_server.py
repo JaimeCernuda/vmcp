@@ -169,7 +169,8 @@ class MockMCPServer:
 
         # Handle notifications (no response)
         if request_id is None:
-            await self._handle_notification(method, params)
+            if method is not None:
+                await self._handle_notification(method, params)
             return None
 
         try:
@@ -198,7 +199,7 @@ class MockMCPServer:
                 return await self._handle_prompts_get(request_id, params)
             elif method == "completion/complete":
                 return await self._handle_completion_complete(request_id, params)
-            elif method.startswith("mock/"):
+            elif method is not None and method.startswith("mock/"):
                 return await self._handle_mock_method(request_id, method, params)
             else:
                 return self._create_error_response(
@@ -538,13 +539,13 @@ class StdioMockServer:
                     if not line:
                         break
 
-                    line = line.decode("utf-8").strip()
-                    if not line:
+                    line_str = line.decode("utf-8").strip()
+                    if not line_str:
                         continue
 
                     # Parse JSON
                     try:
-                        message = json.loads(line)
+                        message = json.loads(line_str)
                     except json.JSONDecodeError as e:
                         logger.error(f"Invalid JSON received: {e}")
                         continue

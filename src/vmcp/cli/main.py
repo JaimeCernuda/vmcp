@@ -170,7 +170,7 @@ _vmcp "$@"
 class VMCPCLIContext:
     """CLI context for sharing state between commands."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.config_path: str | None = None
         self.config: dict[str, Any] | None = None
         self.gateway: VMCPGateway | None = None
@@ -261,7 +261,7 @@ async def _run_interactive(gateway: VMCPGateway) -> None:
     """Run gateway interactively with signal handling."""
     shutdown_event = asyncio.Event()
 
-    def signal_handler(signum, frame):
+    def signal_handler(signum: int, frame: Any) -> None:
         logger.info("Received shutdown signal", signal=signum)
         shutdown_event.set()
 
@@ -388,7 +388,7 @@ def status(ctx: click.Context, output_format: str) -> None:
             pid = None
 
         # Try to connect to gateway for detailed status
-        status_data = {"running": running, "pid": pid, "timestamp": time.time()}
+        status_data: dict[str, Any] = {"running": running, "pid": pid, "timestamp": time.time()}
 
         if running:
             # Try to get detailed status from running gateway
@@ -444,7 +444,7 @@ def list_servers(output_format: str, filter_enabled: bool) -> None:
 
         # This would require async initialization
         # For now, show placeholder data
-        servers_data = [
+        servers_data: list[dict[str, Any]] = [
             {
                 "id": "example-server",
                 "name": "Example MCP Server",
@@ -563,7 +563,7 @@ def info(server_id: str | None, output_format: str) -> None:
     try:
         if server_id:
             # Show specific server info
-            server_info = {
+            server_info: dict[str, Any] = {
                 "id": server_id,
                 "name": f"{server_id} Server",
                 "transport": "stdio",
@@ -601,7 +601,7 @@ def info(server_id: str | None, output_format: str) -> None:
                     click.echo(f"    {key}: {value}")
         else:
             # Show system info
-            system_info = {
+            system_info: dict[str, Any] = {
                 "version": "0.1.0",
                 "config_path": str(Path.home() / ".vmcp" / "config.toml"),
                 "registry_path": str(Path.home() / ".vmcp" / "registry"),
@@ -633,13 +633,13 @@ def info(server_id: str | None, output_format: str) -> None:
 
 
 @cli.group()
-def config():
+def config() -> None:
     """Configuration management commands."""
     pass
 
 
 @cli.group()
-def repo():
+def repo() -> None:
     """Repository management commands."""
     pass
 
@@ -650,7 +650,7 @@ def repo():
 def discover(sources: tuple, refresh: bool) -> None:
     """Discover available MCP servers."""
 
-    async def _discover():
+    async def _discover() -> None:
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
@@ -701,7 +701,7 @@ def search(
 ) -> None:
     """Search for MCP servers."""
 
-    async def _search():
+    async def _search() -> None:
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
@@ -766,7 +766,7 @@ def search(
 def install(server_id: str, no_register: bool, no_enable: bool) -> None:
     """Install an MCP server."""
 
-    async def _install():
+    async def _install() -> None:
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
@@ -804,7 +804,7 @@ def install(server_id: str, no_register: bool, no_enable: bool) -> None:
 def uninstall(server_id: str, keep_config: bool) -> None:
     """Uninstall an MCP server."""
 
-    async def _uninstall():
+    async def _uninstall() -> None:
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
@@ -847,7 +847,7 @@ def uninstall(server_id: str, keep_config: bool) -> None:
 def stats(output_format: str) -> None:
     """Show repository statistics."""
 
-    async def _stats():
+    async def _stats() -> None:
         try:
             config_loader = ConfigLoader()
             config_data = config_loader.load_defaults()
@@ -954,7 +954,7 @@ def validate(config_file: str) -> None:
 
 
 @cli.group()
-def health():
+def health() -> None:
     """Health monitoring commands."""
     pass
 
@@ -971,7 +971,7 @@ def check(output_format: str) -> None:
     """Check system health."""
     try:
         # This would connect to running gateway and get health status
-        health_data = {
+        health_data: dict[str, Any] = {
             "status": "healthy",
             "timestamp": time.time(),
             "checks": [
@@ -1011,7 +1011,7 @@ def check(output_format: str) -> None:
 
 
 @cli.group()
-def metrics():
+def metrics() -> None:
     """Metrics and monitoring commands."""
     pass
 
@@ -1028,7 +1028,7 @@ def show(output_format: str) -> None:
     """Show system metrics."""
     try:
         # This would get metrics from running gateway
-        metrics_data = {
+        metrics_data: dict[str, Any] = {
             "requests_total": 0,
             "requests_success": 0,
             "requests_failed": 0,
@@ -1070,7 +1070,7 @@ def show(output_format: str) -> None:
 
 # Extension management commands (DXT-inspired)
 @cli.group()
-def extension():
+def extension() -> None:
     """Extension management commands (DXT-inspired)."""
     pass
 
@@ -1179,7 +1179,7 @@ def list_extensions(
                     )
 
     except Exception as e:
-        console.print(f"[red]✗ Error listing extensions: {e}[/red]", err=True)
+        click.echo(f"✗ Error listing extensions: {e}", err=True)
         sys.exit(1)
 
 
@@ -1205,11 +1205,11 @@ def install_extension(extension_id: str, repository: str) -> None:
                 "[dim]💡 Use 'vmcp extension enable' to enable the extension[/dim]"
             )
         else:
-            console.print(f"[red]✗ Failed to install {extension_id}[/red]", err=True)
+            click.echo(f"✗ Failed to install {extension_id}", err=True)
             sys.exit(1)
 
     except Exception as e:
-        console.print(f"[red]✗ Error installing extension: {e}[/red]", err=True)
+        click.echo(f"✗ Error installing extension: {e}", err=True)
         sys.exit(1)
 
 
@@ -1257,7 +1257,7 @@ def enable(extension_id: str, config: str | None) -> None:
                 ext_config = json.loads(config)
                 console.print(f"[dim]Using custom configuration: {config}[/dim]")
             except json.JSONDecodeError as e:
-                console.print(f"[red]Invalid JSON configuration: {e}[/red]", err=True)
+                click.echo(f"Invalid JSON configuration: {e}", err=True)
                 sys.exit(1)
 
         with console.status(
@@ -1269,11 +1269,11 @@ def enable(extension_id: str, config: str | None) -> None:
             console.print(f"[green]✅ Successfully enabled {extension_id}[/green]")
             console.print("[dim]🚀 Extension is now available to vMCP Gateway[/dim]")
         else:
-            console.print(f"[red]✗ Failed to enable {extension_id}[/red]", err=True)
+            click.echo(f"✗ Failed to enable {extension_id}", err=True)
             sys.exit(1)
 
     except Exception as e:
-        console.print(f"[red]✗ Error enabling extension: {e}[/red]", err=True)
+        click.echo(f"✗ Error enabling extension: {e}", err=True)
         sys.exit(1)
 
 
@@ -1341,7 +1341,7 @@ def extension_info(extension_id: str) -> None:
                     break
 
         if not manifest:
-            console.print(f"[red]Extension not found: {extension_id}[/red]", err=True)
+            click.echo(f"Extension not found: {extension_id}", err=True)
             sys.exit(1)
 
         # Create info panel
@@ -1442,7 +1442,7 @@ def extension_info(extension_id: str) -> None:
             console.print(tools_table)
 
     except Exception as e:
-        console.print(f"[red]✗ Error getting extension info: {e}[/red]", err=True)
+        click.echo(f"✗ Error getting extension info: {e}", err=True)
         sys.exit(1)
 
 

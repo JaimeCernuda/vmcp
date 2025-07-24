@@ -120,7 +120,7 @@ class CircuitBreaker:
         """Check if circuit is half-open (testing)."""
         return self._state == CircuitState.HALF_OPEN
 
-    async def call(self, func: Callable[..., T], *args, **kwargs) -> T:
+    async def call(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """
         Execute function with circuit breaker protection.
 
@@ -161,17 +161,18 @@ class CircuitBreaker:
 
             duration = time.time() - start_time
             await self._on_success(duration)
-            return result
+            return result  # type: ignore[no-any-return]
 
-        except self.config.expected_exception:
-            duration = time.time() - start_time
-            await self._on_failure(duration)
+        except Exception as e:
+            if isinstance(e, self.config.expected_exception):
+                duration = time.time() - start_time
+                await self._on_failure(duration)
             raise
         finally:
             async with self._lock:
                 self._stats.total_calls += 1
 
-    async def execute(self, func: Callable[..., T], *args, **kwargs) -> T:
+    async def execute(self, func: Callable[..., T], *args: Any, **kwargs: Any) -> T:
         """Alias for call method."""
         return await self.call(func, *args, **kwargs)
 

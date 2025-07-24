@@ -142,7 +142,7 @@ class MCPDiscovery:
         Returns:
             Dictionary of discovered servers
         """
-        servers = {}
+        servers: dict[str, MCPServerInfo] = {}
         directory_path = Path(directory)
 
         if not directory_path.exists():
@@ -390,13 +390,14 @@ class MCPDiscovery:
 
         return capabilities
 
-    def _extract_author(self, authors: list[dict[str, str]]) -> str:
+    def _extract_author(self, authors: list[dict[str, str] | str]) -> str:
         """Extract author name from authors list."""
         if not authors:
             return "Unknown"
-        if isinstance(authors[0], dict):
-            return authors[0].get("name", "Unknown")
-        return str(authors[0])
+        first_author = authors[0]
+        if isinstance(first_author, dict):
+            return first_author.get("name", "Unknown")
+        return str(first_author)
 
     def _extract_url(self, urls: dict[str, str], key: str) -> str | None:
         """Extract URL from URLs dictionary."""
@@ -538,7 +539,7 @@ class MCPDiscovery:
             matches.append(server)
 
         # Sort by relevance (simple scoring)
-        def score_match(server):
+        def score_match(server: MCPServerInfo) -> int:
             score = 0
             if query_lower in server.name.lower():
                 score += 10
@@ -590,9 +591,9 @@ class MCPDiscovery:
                 "tags": {},
             }
 
-        source_types = {}
-        capabilities = {}
-        tags = {}
+        source_types: dict[str, int] = {}
+        capabilities: dict[str, int] = {}
+        tags: dict[str, int] = {}
 
         for server in self.discovered_servers.values():
             # Count source types

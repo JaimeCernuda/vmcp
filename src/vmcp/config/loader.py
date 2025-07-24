@@ -167,7 +167,7 @@ class ConfigLoader:
                 )
 
             logger.info("Configuration loaded successfully")
-            return config_data
+            return config_data  # type: ignore[no-any-return]
 
         except toml.TomlDecodeError as e:
             raise ConfigurationError(f"Invalid TOML syntax: {e}") from e
@@ -215,7 +215,7 @@ class ConfigLoader:
                 f"Configuration validation failed: {'; '.join(errors)}"
             )
 
-        return config_data
+        return config_data  # type: ignore[no-any-return]
 
     def validate_config(self, config_data: dict[str, Any]) -> list[str]:
         """
@@ -284,7 +284,7 @@ class ConfigLoader:
             ConfigurationError: If required environment variable is missing
         """
 
-        def replace_var(match):
+        def replace_var(match: Any) -> str:
             var_expr = match.group(1)
 
             # Check for default value syntax
@@ -300,15 +300,15 @@ class ConfigLoader:
             env_value = os.environ.get(var_name.strip())
 
             if env_value is not None:
-                return env_value
+                return str(env_value)
             elif default_value is not None:
-                return default_value
+                return str(default_value)
             else:
                 raise ConfigurationError(
                     f"Required environment variable not found: {var_name}"
                 )
 
-        return self.env_var_pattern.sub(replace_var, text)
+        return str(self.env_var_pattern.sub(replace_var, text))
 
     def _validate_server_configs(self, servers: dict[str, Any]) -> list[str]:
         """Validate server configurations."""

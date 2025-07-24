@@ -22,7 +22,7 @@ class StdioTransport(Transport):
     """Standard I/O transport implementation."""
 
     def __init__(
-        self, message_handler, protocol_handler: ProtocolHandler | None = None
+        self, message_handler: Any, protocol_handler: ProtocolHandler | None = None
     ) -> None:
         """
         Initialize stdio transport.
@@ -60,7 +60,9 @@ class StdioTransport(Transport):
             transport, _ = await loop.connect_write_pipe(
                 lambda: asyncio.Protocol(), sys.stdout
             )
-            self._writer = asyncio.StreamWriter(transport, None, self._reader, loop)
+            # Create a dummy protocol for the writer
+            protocol = asyncio.StreamReaderProtocol(self._reader, loop=loop)
+            self._writer = asyncio.StreamWriter(transport, protocol, self._reader, loop)
 
             self._running = True
             self._record_connection()
@@ -212,7 +214,7 @@ class StdioTransport(Transport):
 class StdioServerConnection:
     """Connection to an MCP server over stdio."""
 
-    def __init__(self, server_config) -> None:
+    def __init__(self, server_config: Any) -> None:
         """
         Initialize stdio server connection.
 
@@ -340,7 +342,7 @@ class StdioServerConnection:
         request_id = message["id"]
 
         # Create future for response
-        response_future = asyncio.Future()
+        response_future: asyncio.Future[dict[str, Any]] = asyncio.Future()
         self._pending_requests[request_id] = response_future
 
         try:

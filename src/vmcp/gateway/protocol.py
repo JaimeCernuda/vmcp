@@ -94,7 +94,7 @@ class ProtocolHandler:
             # Validate structure
             self.validate_message(message)
 
-            return message
+            return message  # type: ignore[no-any-return]
 
         except json.JSONDecodeError as e:
             logger.warning(f"JSON parse error: {e}")
@@ -183,10 +183,10 @@ class ProtocolHandler:
         message = {"jsonrpc": self.supported_version, "method": method}
 
         if params is not None:
-            message["params"] = params
+            message["params"] = params  # type: ignore[assignment]
 
         if request_id is not None:
-            message["id"] = request_id
+            message["id"] = request_id  # type: ignore[assignment]
 
         return message
 
@@ -220,8 +220,8 @@ class ProtocolHandler:
 
         if result is not None:
             message["result"] = result
-        else:
-            message["error"] = error
+        elif error is not None:
+            message["error"] = error  # type: ignore[assignment]
 
         return message
 
@@ -267,7 +267,7 @@ class ProtocolHandler:
         method = message.get("method")
         if not method:
             raise ProtocolError("Message has no method field")
-        return method
+        return str(method)
 
     def extract_params(
         self, message: dict[str, Any]

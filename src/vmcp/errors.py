@@ -243,7 +243,7 @@ class VMCPPermissionError(VMCPError):
         super().__init__(code, message, kwargs)
 
 
-class PersonaNotFoundError(PermissionError):
+class PersonaNotFoundError(VMCPPermissionError):
     """Persona not found error."""
 
     def __init__(self, persona_name: str) -> None:
@@ -254,7 +254,7 @@ class PersonaNotFoundError(PermissionError):
         )
 
 
-class ServerNotAllowedError(PermissionError):
+class ServerNotAllowedError(VMCPPermissionError):
     """Server not allowed for persona error."""
 
     def __init__(

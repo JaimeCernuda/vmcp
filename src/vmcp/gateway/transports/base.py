@@ -116,7 +116,7 @@ class Transport(ABC):
         """
         try:
             response = await self.message_handler(message)
-            return response
+            return response  # type: ignore[no-any-return]
         except Exception as e:
             logger.error(
                 f"Error handling message in {self.name} transport: {e}", exc_info=True
@@ -339,23 +339,21 @@ class MessageFraming:
                 if not line:
                     return None
 
-                line = line.decode("utf-8").strip()
-                if not line:  # Empty line indicates end of headers
+                line_str = line.decode("utf-8").strip() if isinstance(line, bytes) else str(line).strip()
+                if not line_str:  # Empty line indicates end of headers
                     break
 
-                if ":" in line:
-                    key, value = line.split(":", 1)
+                if ":" in line_str:
+                    key, value = line_str.split(":", 1)
                     headers[key.strip().lower()] = value.strip()
 
             # Get content length
-            content_length = headers.get("content-length")
-            if not content_length:
+            content_length_str = headers.get("content-length")
+            if not content_length_str:
                 raise TransportError("Missing Content-Length header")
+            content_length = int(content_length_str)
 
-            try:
-                length = int(content_length)
-            except ValueError as e:
-                raise TransportError(f"Invalid Content-Length: {content_length}") from e
+            length = content_length
 
             # Validate length
             if length < 0 or length > 10 * 1024 * 1024:  # 10MB limit

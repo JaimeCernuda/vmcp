@@ -215,8 +215,10 @@ class RepositoryManager:
                     command=self._generate_command(server_info, install_path),
                     capabilities=server_info.capabilities,
                     enabled=server_config.config.enabled,
+                    url=server_config.config.url,
+                    pool_config=server_config.config.pool_config,
                 )
-                await self.registry.update_server(server_id, new_config)
+                await self.registry.update_server_config(server_id, config=new_config)
 
             logger.info(f"Successfully updated {server_id}")
             return True
@@ -307,6 +309,8 @@ class RepositoryManager:
                     args=self._generate_iowarp_args(server_info),
                     capabilities=self._format_capabilities(server_info.capabilities),
                     enabled=True,
+                    url=None,
+                    pool_config=None,
                 )
 
                 # Register with vMCP
@@ -393,6 +397,8 @@ class RepositoryManager:
             args=args,
             capabilities=self._format_capabilities(server_info.capabilities),
             enabled=enable,
+            url=None,
+            pool_config=None,
         )
 
         await self.registry.register_server(server_config)
@@ -440,7 +446,7 @@ class RepositoryManager:
         self, capabilities: dict[str, Any]
     ) -> dict[str, list[dict[str, Any]]]:
         """Format capabilities for MCPServerConfig."""
-        formatted = {}
+        formatted: dict[str, list[dict[str, Any]]] = {}
         for cap_type, cap_data in capabilities.items():
             if isinstance(cap_data, dict):
                 # Convert dict to list format expected by registry

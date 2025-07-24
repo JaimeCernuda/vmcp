@@ -173,7 +173,14 @@ class PathBasedRouter(RoutingAlgorithm):
         logger.debug(f"Method '{method}' did not match any path-based rules")
         return None
 
-    def add_rule(
+    def add_rule(self, rule: Any) -> None:
+        """Add routing rule. Use add_path_rule for PathBasedRouter."""
+        if isinstance(rule, RouteRule):
+            self.rules.append(rule)
+        else:
+            raise ValueError(f"PathBasedRouter only accepts RouteRule, got {type(rule)}")
+    
+    def add_path_rule(
         self,
         pattern: str,
         server_id: str,
@@ -599,7 +606,7 @@ class HybridRouter(RoutingAlgorithm):
 class CapabilityRouter:
     """Routes requests based on server capabilities."""
 
-    def __init__(self, registry) -> None:
+    def __init__(self, registry: Any) -> None:
         """
         Initialize capability router.
 
@@ -634,7 +641,7 @@ class CapabilityRouter:
             f"Routed request to {selected.config.id} "
             f"based on capability '{required_capability}'"
         )
-        return selected.config.id
+        return str(selected.config.id)
 
     def get_method_capability(self, method: str) -> str | None:
         """

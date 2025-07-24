@@ -168,7 +168,7 @@ class ConnectionPool:
         logger.info(f"Connection pool closed for {self.server_id}")
 
     @asynccontextmanager
-    async def acquire(self, timeout: float | None = None):
+    async def acquire(self, timeout: float | None = None) -> Any:
         """
         Acquire connection from pool with timeout.
 
@@ -231,7 +231,7 @@ class ConnectionPool:
                     break
 
                 # Wait for available connection
-                waiter = asyncio.Future()
+                waiter: asyncio.Future[None] = asyncio.Future()
                 self._waiters.append(waiter)
 
                 try:
