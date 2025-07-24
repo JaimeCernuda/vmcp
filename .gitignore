@@ -150,6 +150,13 @@ vmcp_test_config.toml
 .vmcp/
 repositories/builtin/extensions/*.vext
 
+# Development documentation (keep only README.md)
+PHASE1_COMPLETION.md
+Python-vmcp-implementation-guide.md
+vmcp-technical-spec.md
+*-technical-spec.md
+*-implementation-guide.md
+
 # Temporary files
 *.tmp
 temp/

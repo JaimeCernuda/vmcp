@@ -1,0 +1,26 @@
+version = "0.1.0"
+
+[gateway]
+registry_path = "~/.vmcp/registry"
+log_level = "INFO"
+cache_enabled = true
+cache_ttl = 300
+max_connections = 1000
+request_timeout = 30
+
+[routing]
+default_strategy = "hybrid"
+load_balancer = "round_robin"
+
+[transports.stdio]
+enabled = true
+
+[transports.http]
+enabled = false
+port = 3000
+host = "127.0.0.1"
+
+[transports.websocket]
+enabled = false
+port = 3001
+host = "127.0.0.1"
