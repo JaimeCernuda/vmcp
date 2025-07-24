@@ -1,69 +1,94 @@
 """Tests for server registry functionality."""
 
+import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
 
-from vmcp.errors import RegistryError
-from vmcp.registry.registry import ServerInfo, ServerRegistry, ServerState
+from vmcp.errors import RegistryError, ServerNotFoundError
+from vmcp.registry.registry import MCPServerConfig, Registry, MCPServerState
 
 
-class TestServerState:
+class TestMCPServerConfig:
+    def test_server_config_creation(self):
+        """Test creating server config."""
+        config = MCPServerConfig(
+            id="test-server",
+            name="Test Server",
+            transport="stdio",
+            command="python",
+            args=["server.py"],
+        )
+
+        assert config.id == "test-server"
+        assert config.name == "Test Server"
+        assert config.transport == "stdio"
+        assert config.enabled is True  # default
+        assert config.command == "python"
+        assert config.args == ["server.py"]
+
+    def test_server_config_environment_expansion(self):
+        """Test environment variable expansion."""
+        config = MCPServerConfig(
+            id="test-server",
+            name="Test Server",
+            environment={"HOME": "$HOME", "USER": "testuser"}
+        )
+        
+        expanded = config.expand_environment()
+        assert "HOME" in expanded
+        assert "USER" in expanded
+        assert expanded["USER"] == "testuser"
+
+
+class TestMCPServerState:
     def test_server_state_creation(self):
         """Test creating server state."""
-        state = ServerState()
+        config = MCPServerConfig(id="test-server", name="Test Server")
+        state = MCPServerState(config=config)
 
-        assert state.status == "unknown"
-        assert state.error_count == 0
-        assert state.consecutive_failures == 0
+        assert state.is_healthy is False
+        assert state.connection_count == 0
+        assert state.total_requests == 0
+        assert state.failed_requests == 0
+        assert state.last_error is None
         assert state.last_error_time is None
+        assert state.uptime_start is None
+
+    def test_server_state_update_health(self):
+        """Test health update."""
+        config = MCPServerConfig(id="test-server", name="Test Server")
+        state = MCPServerState(config=config)
+        
+        state.update_health(True)
+        assert state.is_healthy is True
+        assert state.last_health_check is not None
         assert state.uptime_start is not None
+        
+        state.update_health(False, "Connection failed")
+        assert state.is_healthy is False
+        assert state.last_error == "Connection failed"
+        assert state.last_error_time is not None
+        assert state.failed_requests == 1
 
-    def test_server_state_uptime(self):
-        """Test uptime calculation."""
-        state = ServerState()
-        uptime = state.uptime
-
-        assert isinstance(uptime, float)
-        assert uptime >= 0
-
-
-class TestServerInfo:
-    def test_server_info_creation(self):
-        """Test creating server info."""
-        info = ServerInfo(
-            id="test-server",
-            name="Test Server",
-            transport="stdio",
-            command="python",
-            args=["server.py"],
-        )
-
-        assert info.id == "test-server"
-        assert info.name == "Test Server"
-        assert info.transport == "stdio"
-        assert info.enabled is True  # default
-        assert info.state.status == "unknown"
-
-    def test_server_info_with_state(self):
-        """Test server info with custom state."""
-        state = ServerState()
-        state.status = "healthy"
-
-        info = ServerInfo(
-            id="test-server",
-            name="Test Server",
-            transport="stdio",
-            command="python",
-            args=["server.py"],
-            state=state,
-        )
-
-        assert info.state.status == "healthy"
+    def test_server_state_record_request(self):
+        """Test request recording."""
+        config = MCPServerConfig(id="test-server", name="Test Server")
+        state = MCPServerState(config=config)
+        
+        state.record_request(True)
+        assert state.total_requests == 1
+        assert state.failed_requests == 0
+        
+        state.record_request(False)
+        assert state.total_requests == 2
+        assert state.failed_requests == 1
+        
+        assert state.get_error_rate() == 50.0
 
 
-class TestServerRegistry:
+class TestRegistry:
     @pytest.fixture
     def temp_registry_path(self):
         """Create temporary registry directory."""
@@ -73,17 +98,19 @@ class TestServerRegistry:
     @pytest.fixture
     def registry(self, temp_registry_path):
         """Create server registry with temporary path."""
-        return ServerRegistry(registry_path=str(temp_registry_path))
+        return Registry(registry_path=str(temp_registry_path))
 
     def test_registry_initialization(self, registry, temp_registry_path):
         """Test registry initialization."""
-        assert registry.registry_path == str(temp_registry_path)
+        assert registry.registry_path == temp_registry_path
         assert registry._servers == {}
-        assert (temp_registry_path / "servers.json").exists()
+        # Registry doesn't create the file until first save
+        assert registry._config_file == temp_registry_path / "servers.json"
 
-    def test_add_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_add_server(self, registry):
         """Test adding a server to registry."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -91,14 +118,14 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        result = registry.add_server(server_info)
-        assert result is True
+        await registry.register_server(server_config)
         assert "test-server" in registry._servers
-        assert registry._servers["test-server"] == server_info
+        assert registry._servers["test-server"].config.id == "test-server"
 
-    def test_add_duplicate_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_add_duplicate_server(self, registry):
         """Test adding duplicate server."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -106,15 +133,16 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
 
         # Adding same server again should fail
-        with pytest.raises(RegistryError, match="Server .* already exists"):
-            registry.add_server(server_info)
+        with pytest.raises(RegistryError, match="Server .* already registered"):
+            await registry.register_server(server_config)
 
-    def test_remove_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_remove_server(self, registry):
         """Test removing a server."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -122,21 +150,22 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
         assert "test-server" in registry._servers
 
-        result = registry.remove_server("test-server")
-        assert result is True
+        await registry.unregister_server("test-server")
         assert "test-server" not in registry._servers
 
-    def test_remove_nonexistent_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_remove_nonexistent_server(self, registry):
         """Test removing non-existent server."""
-        result = registry.remove_server("nonexistent")
-        assert result is False
+        with pytest.raises(ServerNotFoundError):
+            await registry.unregister_server("nonexistent")
 
-    def test_get_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_get_server(self, registry):
         """Test getting server information."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -144,57 +173,60 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
 
         retrieved = registry.get_server("test-server")
-        assert retrieved == server_info
+        assert retrieved is not None
+        assert retrieved.config.id == "test-server"
 
         # Non-existent server
         assert registry.get_server("nonexistent") is None
 
-    def test_list_servers(self, registry):
+    @pytest.mark.asyncio
+    async def test_list_servers(self, registry):
         """Test listing all servers."""
-        server1 = ServerInfo(
+        server1 = MCPServerConfig(
             id="server1", name="Server 1", transport="stdio", command="python", args=[]
         )
-        server2 = ServerInfo(
-            id="server2", name="Server 2", transport="http", command="node", args=[]
+        server2 = MCPServerConfig(
+            id="server2", name="Server 2", transport="stdio", command="node", args=[]
         )
 
-        registry.add_server(server1)
-        registry.add_server(server2)
+        await registry.register_server(server1)
+        await registry.register_server(server2)
 
-        servers = registry.list_servers()
+        servers = registry.get_all_servers()
         assert len(servers) == 2
-        assert server1 in servers
-        assert server2 in servers
+        assert any(s.config.id == "server1" for s in servers)
+        assert any(s.config.id == "server2" for s in servers)
 
-    def test_list_servers_by_status(self, registry):
+    @pytest.mark.asyncio
+    async def test_list_servers_by_status(self, registry):
         """Test listing servers by status."""
-        server1 = ServerInfo(
+        server1 = MCPServerConfig(
             id="server1", name="Server 1", transport="stdio", command="python", args=[]
         )
-        server2 = ServerInfo(
+        server2 = MCPServerConfig(
             id="server2", name="Server 2", transport="stdio", command="python", args=[]
         )
 
-        server1.state.status = "healthy"
-        server2.state.status = "unhealthy"
+        await registry.register_server(server1)
+        await registry.register_server(server2)
+        
+        # Update health status
+        state1 = registry.get_server("server1")
+        state2 = registry.get_server("server2")
+        state1.update_health(True)
+        state2.update_health(False)
 
-        registry.add_server(server1)
-        registry.add_server(server2)
-
-        healthy_servers = registry.list_servers(status="healthy")
+        healthy_servers = registry.get_healthy_servers()
         assert len(healthy_servers) == 1
-        assert healthy_servers[0] == server1
+        assert healthy_servers[0].config.id == "server1"
 
-        unhealthy_servers = registry.list_servers(status="unhealthy")
-        assert len(unhealthy_servers) == 1
-        assert unhealthy_servers[0] == server2
-
-    def test_update_server_status(self, registry):
+    @pytest.mark.asyncio
+    async def test_update_server_status(self, registry):
         """Test updating server status."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -202,40 +234,46 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
 
-        registry.update_server_status("test-server", "healthy")
-        updated = registry.get_server("test-server")
-        assert updated.state.status == "healthy"
+        state = registry.get_server("test-server")
+        state.update_health(True)
+        assert state.is_healthy is True
 
-    def test_update_nonexistent_server_status(self, registry):
+    @pytest.mark.asyncio
+    async def test_update_nonexistent_server_status(self, registry):
         """Test updating status of non-existent server."""
-        result = registry.update_server_status("nonexistent", "healthy")
-        assert result is False
+        with pytest.raises(ServerNotFoundError):
+            await registry.update_server_config("nonexistent", enabled=True)
 
-    def test_get_server_stats(self, registry):
+    @pytest.mark.asyncio
+    async def test_get_server_stats(self, registry):
         """Test getting server statistics."""
-        server1 = ServerInfo(
+        server1 = MCPServerConfig(
             id="server1", name="Server 1", transport="stdio", command="python", args=[]
         )
-        server2 = ServerInfo(
+        server2 = MCPServerConfig(
             id="server2", name="Server 2", transport="stdio", command="python", args=[]
         )
 
-        server1.state.status = "healthy"
-        server2.state.status = "unhealthy"
+        await registry.register_server(server1)
+        await registry.register_server(server2)
+        
+        # Update health status
+        state1 = registry.get_server("server1")
+        state2 = registry.get_server("server2")
+        state1.update_health(True)
+        state2.update_health(False)
 
-        registry.add_server(server1)
-        registry.add_server(server2)
-
-        stats = registry.get_stats()
+        stats = registry.get_registry_stats()
         assert stats["total_servers"] == 2
         assert stats["healthy_servers"] == 1
         assert stats["unhealthy_servers"] == 1
 
-    def test_persistence_save_load(self, registry, temp_registry_path):
+    @pytest.mark.asyncio
+    async def test_persistence_save_load(self, registry, temp_registry_path):
         """Test saving and loading registry data."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -243,31 +281,33 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
-        registry.save()
+        await registry.register_server(server_config)
+        await registry.save_config()
 
         # Create new registry instance and load
-        new_registry = ServerRegistry(registry_path=str(temp_registry_path))
-        new_registry.load()
+        new_registry = Registry(registry_path=str(temp_registry_path))
+        await new_registry.load_servers()
 
         retrieved = new_registry.get_server("test-server")
         assert retrieved is not None
-        assert retrieved.id == "test-server"
-        assert retrieved.name == "Test Server"
+        assert retrieved.config.id == "test-server"
+        assert retrieved.config.name == "Test Server"
 
-    def test_load_invalid_json(self, registry, temp_registry_path):
+    @pytest.mark.asyncio
+    async def test_load_invalid_json(self, registry, temp_registry_path):
         """Test loading with invalid JSON file."""
         # Create invalid JSON file
         servers_file = temp_registry_path / "servers.json"
         servers_file.write_text("invalid json content")
 
         # Should handle gracefully and initialize empty registry
-        registry.load()
-        assert len(registry._servers) == 0
+        with pytest.raises(RegistryError):
+            await registry.load_servers()
 
-    def test_enable_disable_server(self, registry):
+    @pytest.mark.asyncio
+    async def test_enable_disable_server(self, registry):
         """Test enabling and disabling servers."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -276,21 +316,20 @@ class TestServerRegistry:
             enabled=False,
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
 
         # Enable server
-        result = registry.enable_server("test-server")
-        assert result is True
-        assert registry.get_server("test-server").enabled is True
+        await registry.update_server_config("test-server", enabled=True)
+        assert registry.get_server("test-server").config.enabled is True
 
         # Disable server
-        result = registry.disable_server("test-server")
-        assert result is True
-        assert registry.get_server("test-server").enabled is False
+        await registry.update_server_config("test-server", enabled=False)
+        assert registry.get_server("test-server").config.enabled is False
 
-    def test_get_enabled_servers(self, registry):
+    @pytest.mark.asyncio
+    async def test_get_enabled_servers(self, registry):
         """Test getting only enabled servers."""
-        server1 = ServerInfo(
+        server1 = MCPServerConfig(
             id="server1",
             name="Server 1",
             transport="stdio",
@@ -298,7 +337,7 @@ class TestServerRegistry:
             args=[],
             enabled=True,
         )
-        server2 = ServerInfo(
+        server2 = MCPServerConfig(
             id="server2",
             name="Server 2",
             transport="stdio",
@@ -307,16 +346,17 @@ class TestServerRegistry:
             enabled=False,
         )
 
-        registry.add_server(server1)
-        registry.add_server(server2)
+        await registry.register_server(server1)
+        await registry.register_server(server2)
 
         enabled_servers = registry.get_enabled_servers()
         assert len(enabled_servers) == 1
-        assert enabled_servers[0] == server1
+        assert enabled_servers[0].config.id == "server1"
 
-    def test_health_check_update(self, registry):
+    @pytest.mark.asyncio
+    async def test_health_check_update(self, registry):
         """Test health check updates."""
-        server_info = ServerInfo(
+        server_config = MCPServerConfig(
             id="test-server",
             name="Test Server",
             transport="stdio",
@@ -324,17 +364,16 @@ class TestServerRegistry:
             args=["server.py"],
         )
 
-        registry.add_server(server_info)
+        await registry.register_server(server_config)
 
         # Update health check
-        registry.update_health_check("test-server", True)
         server = registry.get_server("test-server")
-        assert server.state.status == "healthy"
-        assert server.state.consecutive_failures == 0
+        server.update_health(True)
+        assert server.is_healthy is True
+        assert server.failed_requests == 0
 
         # Failed health check
-        registry.update_health_check("test-server", False, error="Connection failed")
-        server = registry.get_server("test-server")
-        assert server.state.status == "unhealthy"
-        assert server.state.consecutive_failures == 1
-        assert server.state.last_error == "Connection failed"
+        server.update_health(False, "Connection failed")
+        assert server.is_healthy is False
+        assert server.failed_requests == 1
+        assert server.last_error == "Connection failed"

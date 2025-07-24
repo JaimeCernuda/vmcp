@@ -22,27 +22,13 @@ class TestExtensionManager:
     @pytest.fixture
     def extension_manager(self, temp_dir):
         """Create an extension manager with temporary directories."""
-        config_path = temp_dir / "config.toml"
-        registry_path = temp_dir / "registry"
-        extensions_path = temp_dir / "extensions"
-        repository_path = temp_dir / "repository"
-
+        vmcp_home = temp_dir / ".vmcp"
+        
         # Create necessary directories
-        registry_path.mkdir()
-        extensions_path.mkdir()
-        repository_path.mkdir()
-
-        with patch("vmcp.extensions.manager.load_config") as mock_load:
-            mock_config = Mock()
-            mock_config.gateway.registry_path = str(registry_path)
-            mock_load.return_value = mock_config
-
-            manager = ExtensionManager(
-                config_path=str(config_path),
-                extensions_path=str(extensions_path),
-                repository_path=str(repository_path),
-            )
-            yield manager
+        vmcp_home.mkdir()
+        
+        manager = ExtensionManager(vmcp_home=str(vmcp_home))
+        yield manager
 
     @pytest.fixture
     def sample_manifest(self):

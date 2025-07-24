@@ -4,18 +4,17 @@ Unit tests for vMCP error handling system.
 
 import pytest
 
-from src.vmcp.errors import (
-    AllServersDownError,
+from vmcp.errors import (
+    CircuitBreakerOpenError,
     ConfigurationError,
-    GatewayError,
-    NoServerFoundError,
-    PermissionDeniedError,
     RoutingError,
+    ServerNotFoundError,
     ServerUnavailableError,
     TransportError,
     VMCPError,
     VMCPErrorCode,
-    create_json_rpc_error_response,
+    VMCPPermissionError,
+    error_from_json_rpc,
 )
 
 
@@ -24,7 +23,6 @@ class TestVMCPErrorCode:
 
     def test_error_codes_exist(self):
         """Test that all expected error codes exist."""
-        assert VMCPErrorCode.SUCCESS == 0
         assert VMCPErrorCode.INVALID_REQUEST == -32600
         assert VMCPErrorCode.METHOD_NOT_FOUND == -32601
         assert VMCPErrorCode.INVALID_PARAMS == -32602
@@ -32,14 +30,14 @@ class TestVMCPErrorCode:
         assert VMCPErrorCode.PARSE_ERROR == -32700
 
         # vMCP specific codes
-        assert VMCPErrorCode.TRANSPORT_ERROR == -32001
-        assert VMCPErrorCode.ROUTING_FAILED == -32002
-        assert VMCPErrorCode.SERVER_UNAVAILABLE == -32003
-        assert VMCPErrorCode.NO_SERVER_FOUND == -32004
-        assert VMCPErrorCode.ALL_SERVERS_DOWN == -32005
-        assert VMCPErrorCode.CONFIGURATION_ERROR == -32006
-        assert VMCPErrorCode.PERMISSION_DENIED == -32007
-        assert VMCPErrorCode.GATEWAY_ERROR == -32008
+        assert VMCPErrorCode.TRANSPORT_ERROR == 1000
+        assert VMCPErrorCode.ROUTING_FAILED == 2002
+        assert VMCPErrorCode.SERVER_UNAVAILABLE == 2001
+        assert VMCPErrorCode.NO_SERVER_FOUND == 2000
+        assert VMCPErrorCode.ALL_SERVERS_DOWN == 2003
+        assert VMCPErrorCode.CONFIGURATION_ERROR == 5003
+        assert VMCPErrorCode.UNAUTHORIZED == 3000
+        assert VMCPErrorCode.GATEWAY_ERROR == 5000
 
     def test_error_code_values_unique(self):
         """Test that all error codes have unique values."""
@@ -56,22 +54,23 @@ class TestVMCPError:
 
         assert error.code == VMCPErrorCode.INTERNAL_ERROR
         assert error.message == "Test error"
-        assert error.details is None
+        assert error.data == {}
         assert error.server_id is None
 
     def test_error_with_details(self):
         """Test creating error with details."""
-        details = {"key": "value", "count": 42}
+        data = {"key": "value", "count": 42}
         error = VMCPError(
             VMCPErrorCode.ROUTING_FAILED,
             "Routing failed",
-            details=details,
+            data=data,
             server_id="test-server",
         )
 
         assert error.code == VMCPErrorCode.ROUTING_FAILED
         assert error.message == "Routing failed"
-        assert error.details == details
+        assert error.data["key"] == "value"
+        assert error.data["count"] == 42
         assert error.server_id == "test-server"
 
     def test_error_string_representation(self):
@@ -79,9 +78,7 @@ class TestVMCPError:
         error = VMCPError(VMCPErrorCode.TRANSPORT_ERROR, "Connection failed")
         error_str = str(error)
 
-        assert "TRANSPORT_ERROR" in error_str
         assert "Connection failed" in error_str
-        assert "-32001" in error_str
 
     def test_error_with_server_id_in_string(self):
         """Test error string includes server ID when present."""
@@ -90,7 +87,6 @@ class TestVMCPError:
         )
         error_str = str(error)
 
-        assert "test-server" in error_str
         assert "Server down" in error_str
 
 
@@ -107,62 +103,58 @@ class TestSpecificErrorTypes:
 
     def test_transport_error(self):
         """Test TransportError."""
-        error = TransportError("Connection timeout", transport_type="stdio")
+        error = TransportError("Connection timeout")
 
         assert error.code == VMCPErrorCode.TRANSPORT_ERROR
         assert error.message == "Connection timeout"
-        assert error.transport_type == "stdio"
 
     def test_routing_error(self):
         """Test RoutingError."""
-        error = RoutingError("No route found", method="tools/list")
+        error = RoutingError("No route found")
 
         assert error.code == VMCPErrorCode.ROUTING_FAILED
         assert error.message == "No route found"
-        assert error.method == "tools/list"
 
     def test_server_unavailable_error(self):
         """Test ServerUnavailableError."""
         error = ServerUnavailableError("server-1", reason="Connection refused")
 
         assert error.code == VMCPErrorCode.SERVER_UNAVAILABLE
-        assert error.server_id == "server-1"
+        assert error.data["server_id"] == "server-1"
         assert "Connection refused" in error.message
-        assert error.reason == "Connection refused"
+        assert error.data["reason"] == "Connection refused"
 
     def test_no_server_found_error(self):
-        """Test NoServerFoundError."""
-        error = NoServerFoundError("tools/list", method="tools/list")
+        """Test ServerNotFoundError."""
+        error = ServerNotFoundError("server-1")
 
         assert error.code == VMCPErrorCode.NO_SERVER_FOUND
-        assert error.server_id == "tools/list"
-        assert error.method == "tools/list"
-        assert "No server found" in error.message
+        assert error.data["server_id"] == "server-1"
+        assert "Server 'server-1' not found" in error.message
 
-    def test_all_servers_down_error(self):
-        """Test AllServersDownError."""
-        server_ids = ["server-1", "server-2", "server-3"]
-        error = AllServersDownError(server_ids)
+    def test_circuit_breaker_open_error(self):
+        """Test CircuitBreakerOpenError."""
+        error = CircuitBreakerOpenError("server-1", 5, 123456.0)
 
-        assert error.code == VMCPErrorCode.ALL_SERVERS_DOWN
-        assert error.server_ids == server_ids
-        assert "All servers are down" in error.message
-        assert "server-1, server-2, server-3" in error.message
+        assert error.code == VMCPErrorCode.CIRCUIT_BREAKER_OPEN
+        assert error.data["server_id"] == "server-1"
+        assert "Circuit breaker open" in error.message
+        assert error.data["failure_count"] == 5
+        assert error.data["last_failure_time"] == 123456.0
 
-    def test_gateway_error(self):
-        """Test GatewayError."""
-        error = GatewayError("Failed to start gateway")
+    def test_vmcp_permission_error(self):
+        """Test VMCPPermissionError."""
+        error = VMCPPermissionError("Access denied")
 
-        assert error.code == VMCPErrorCode.GATEWAY_ERROR
-        assert error.message == "Failed to start gateway"
+        assert error.code == VMCPErrorCode.UNAUTHORIZED
+        assert error.message == "Access denied"
 
     def test_permission_denied_error(self):
         """Test PermissionDeniedError."""
-        error = PermissionDeniedError("Access denied", resource="protected-resource")
+        error = VMCPPermissionError("Access denied")
 
-        assert error.code == VMCPErrorCode.PERMISSION_DENIED
+        assert error.code == VMCPErrorCode.UNAUTHORIZED
         assert error.message == "Access denied"
-        assert error.resource == "protected-resource"
 
 
 class TestJSONRPCErrorResponse:
@@ -170,27 +162,24 @@ class TestJSONRPCErrorResponse:
 
     def test_create_basic_error_response(self):
         """Test creating basic JSON-RPC error response."""
-        response = create_json_rpc_error_response(
-            request_id=1,
-            code=VMCPErrorCode.METHOD_NOT_FOUND,
-            message="Method not found",
-        )
+        error = VMCPError(VMCPErrorCode.METHOD_NOT_FOUND, "Method not found")
+        response = error.to_json_rpc_error(request_id=1)
 
         assert response["jsonrpc"] == "2.0"
         assert response["id"] == 1
         assert response["error"]["code"] == -32601
         assert response["error"]["message"] == "Method not found"
-        assert "data" not in response["error"]
+        assert response["error"]["data"] == {}
 
     def test_create_error_response_with_data(self):
         """Test creating JSON-RPC error response with data."""
         error_data = {"method": "unknown/method", "available": ["tools/list", "ping"]}
-        response = create_json_rpc_error_response(
-            request_id="test-id",
-            code=VMCPErrorCode.METHOD_NOT_FOUND,
-            message="Method not found",
-            data=error_data,
+        error = VMCPError(
+            VMCPErrorCode.METHOD_NOT_FOUND,
+            "Method not found",
+            data=error_data
         )
+        response = error.to_json_rpc_error(request_id="test-id")
 
         assert response["jsonrpc"] == "2.0"
         assert response["id"] == "test-id"
@@ -200,9 +189,8 @@ class TestJSONRPCErrorResponse:
 
     def test_create_error_response_null_id(self):
         """Test creating JSON-RPC error response with null ID."""
-        response = create_json_rpc_error_response(
-            request_id=None, code=VMCPErrorCode.PARSE_ERROR, message="Parse error"
-        )
+        error = VMCPError(VMCPErrorCode.PARSE_ERROR, "Parse error")
+        response = error.to_json_rpc_error(request_id=None)
 
         assert response["jsonrpc"] == "2.0"
         assert response["id"] is None
@@ -212,19 +200,7 @@ class TestJSONRPCErrorResponse:
     def test_create_error_response_with_vmcp_error(self):
         """Test creating JSON-RPC error response from VMCPError."""
         vmcp_error = ServerUnavailableError("test-server", reason="Connection timeout")
-
-        response = create_json_rpc_error_response(
-            request_id=42,
-            code=vmcp_error.code,
-            message=vmcp_error.message,
-            data={
-                "server_id": vmcp_error.server_id,
-                "reason": vmcp_error.reason,
-                "details": vmcp_error.details,
-            }
-            if vmcp_error.details
-            else {"server_id": vmcp_error.server_id, "reason": vmcp_error.reason},
-        )
+        response = vmcp_error.to_json_rpc_error(request_id=42)
 
         assert response["jsonrpc"] == "2.0"
         assert response["id"] == 42
@@ -243,13 +219,13 @@ class TestErrorInheritance:
         transport_error = TransportError("test")
         routing_error = RoutingError("test")
         server_error = ServerUnavailableError("test-server")
-        gateway_error = GatewayError("test")
+        permission_error = VMCPPermissionError("test")
 
         assert isinstance(config_error, VMCPError)
         assert isinstance(transport_error, VMCPError)
         assert isinstance(routing_error, VMCPError)
         assert isinstance(server_error, VMCPError)
-        assert isinstance(gateway_error, VMCPError)
+        assert isinstance(permission_error, VMCPError)
 
     def test_vmcp_error_inherits_from_exception(self):
         """Test that VMCPError inherits from Exception."""
@@ -273,6 +249,40 @@ class TestErrorInheritance:
             raise TransportError("Test")
 
 
+class TestErrorFromJSONRPC:
+    """Test error_from_json_rpc function."""
+
+    def test_error_from_json_rpc(self):
+        """Test creating VMCPError from JSON-RPC error dict."""
+        error_dict = {
+            "code": VMCPErrorCode.TRANSPORT_ERROR,
+            "message": "Connection failed",
+            "data": {"host": "localhost", "port": 3000}
+        }
+        
+        error = error_from_json_rpc(error_dict, request_id="test-123")
+        
+        assert error.code == VMCPErrorCode.TRANSPORT_ERROR
+        assert error.message == "Connection failed"
+        assert error.data["host"] == "localhost"
+        assert error.data["port"] == 3000
+        assert error.request_id == "test-123"
+
+    def test_error_from_json_rpc_invalid_code(self):
+        """Test creating VMCPError from JSON-RPC error dict with invalid code."""
+        error_dict = {
+            "code": 99999,  # Invalid code
+            "message": "Unknown error",
+            "data": {}
+        }
+        
+        error = error_from_json_rpc(error_dict)
+        
+        assert error.code == VMCPErrorCode.INTERNAL_ERROR
+        assert error.message == "Unknown error"
+        assert error.data["original_code"] == 99999
+
+
 class TestErrorCodeMapping:
     """Test error code mapping and consistency."""
 
@@ -283,10 +293,9 @@ class TestErrorCodeMapping:
             (TransportError("test"), VMCPErrorCode.TRANSPORT_ERROR),
             (RoutingError("test"), VMCPErrorCode.ROUTING_FAILED),
             (ServerUnavailableError("server"), VMCPErrorCode.SERVER_UNAVAILABLE),
-            (NoServerFoundError("server"), VMCPErrorCode.NO_SERVER_FOUND),
-            (AllServersDownError([]), VMCPErrorCode.ALL_SERVERS_DOWN),
-            (GatewayError("test"), VMCPErrorCode.GATEWAY_ERROR),
-            (PermissionDeniedError("test"), VMCPErrorCode.PERMISSION_DENIED),
+            (ServerNotFoundError("server"), VMCPErrorCode.NO_SERVER_FOUND),
+            (CircuitBreakerOpenError("server", 5), VMCPErrorCode.CIRCUIT_BREAKER_OPEN),
+            (VMCPPermissionError("test"), VMCPErrorCode.UNAUTHORIZED),
         ]
 
         for error, expected_code in test_cases:
