@@ -388,7 +388,11 @@ def status(ctx: click.Context, output_format: str) -> None:
             pid = None
 
         # Try to connect to gateway for detailed status
-        status_data: dict[str, Any] = {"running": running, "pid": pid, "timestamp": time.time()}
+        status_data: dict[str, Any] = {
+            "running": running,
+            "pid": pid,
+            "timestamp": time.time(),
+        }
 
         if running:
             # Try to get detailed status from running gateway

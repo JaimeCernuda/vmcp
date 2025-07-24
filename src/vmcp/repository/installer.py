@@ -83,7 +83,8 @@ class MCPInstaller:
                 await self._install_pypi(server_info, install_path)
             else:
                 raise InstallationFailedError(
-                    server_info.id, f"Unsupported source type: {server_info.source_type}"
+                    server_info.id,
+                    f"Unsupported source type: {server_info.source_type}",
                 )
 
             # Record installation
@@ -114,7 +115,9 @@ class MCPInstaller:
         logger.info(f"Updating MCP server: {server_id}")
 
         if not await self.is_installed(server_id):
-            raise InstallationFailedError(server_id, f"Server not installed: {server_id}")
+            raise InstallationFailedError(
+                server_id, f"Server not installed: {server_id}"
+            )
 
         install_path = self.install_dir / server_id
 
@@ -140,7 +143,9 @@ class MCPInstaller:
             return str(install_path)
 
         except Exception as e:
-            raise InstallationFailedError(server_id, f"Update failed for {server_id}: {e}") from e
+            raise InstallationFailedError(
+                server_id, f"Update failed for {server_id}: {e}"
+            ) from e
 
     async def uninstall_server(self, server_id: str) -> bool:
         """
@@ -175,7 +180,9 @@ class MCPInstaller:
 
         except Exception as e:
             logger.error(f"Failed to uninstall {server_id}: {e}")
-            raise InstallationFailedError(server_id, f"Uninstallation failed: {e}") from e
+            raise InstallationFailedError(
+                server_id, f"Uninstallation failed: {e}"
+            ) from e
 
     async def is_installed(self, server_id: str) -> bool:
         """
@@ -318,14 +325,18 @@ class MCPInstaller:
         source_path = Path(server_info.source_location)
 
         if not source_path.exists():
-            raise InstallationFailedError(server_info.id, f"Source directory not found: {source_path}")
+            raise InstallationFailedError(
+                server_info.id, f"Source directory not found: {source_path}"
+            )
 
         # Copy source to installation directory
         if source_path.is_dir():
             # Copy entire directory
             shutil.copytree(source_path, install_path, dirs_exist_ok=True)
         else:
-            raise InstallationFailedError(server_info.id, f"Source is not a directory: {source_path}")
+            raise InstallationFailedError(
+                server_info.id, f"Source is not a directory: {source_path}"
+            )
 
         # Install dependencies using UV
         await self._install_dependencies(install_path)
@@ -342,7 +353,9 @@ class MCPInstaller:
         try:
             git.Repo.clone_from(repo_url, install_path)
         except Exception as e:
-            raise InstallationFailedError(server_info.id, f"Git clone failed: {e}") from e
+            raise InstallationFailedError(
+                server_info.id, f"Git clone failed: {e}"
+            ) from e
 
         # Install dependencies
         await self._install_dependencies(install_path)
@@ -455,7 +468,9 @@ build-backend = "setuptools.build_meta"
         except asyncio.TimeoutError as e:
             process.kill()
             await process.wait()
-            raise InstallationFailedError("command", f"Command timed out: {' '.join(cmd)}") from e
+            raise InstallationFailedError(
+                "command", f"Command timed out: {' '.join(cmd)}"
+            ) from e
 
     def _record_installation(
         self,

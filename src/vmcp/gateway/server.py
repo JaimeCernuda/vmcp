@@ -192,7 +192,9 @@ class VMCPGateway:
 
         except Exception as e:
             logger.error("Failed to initialize gateway", error=str(e), exc_info=True)
-            raise VMCPError(VMCPErrorCode.INTERNAL_ERROR, f"Initialization failed: {e}") from e
+            raise VMCPError(
+                VMCPErrorCode.INTERNAL_ERROR, f"Initialization failed: {e}"
+            ) from e
 
     async def _initialize_transports(self) -> None:
         """Initialize configured transports."""
@@ -479,7 +481,11 @@ class VMCPGateway:
                 )
 
             elif method == "vmcp/servers/health":
-                health_data = await self.health_checker.check_health() if self.health_checker else {}
+                health_data = (
+                    await self.health_checker.check_health()
+                    if self.health_checker
+                    else {}
+                )
                 return self.protocol_handler.create_response(
                     request_id, result=health_data
                 )

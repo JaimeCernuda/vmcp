@@ -339,7 +339,11 @@ class MessageFraming:
                 if not line:
                     return None
 
-                line_str = line.decode("utf-8").strip() if isinstance(line, bytes) else str(line).strip()
+                line_str = (
+                    line.decode("utf-8").strip()
+                    if isinstance(line, bytes)
+                    else str(line).strip()
+                )
                 if not line_str:  # Empty line indicates end of headers
                     break
 

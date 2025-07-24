@@ -356,6 +356,7 @@ class Router:
     def add_path_rule(self, pattern: str, server_id: str, priority: int = 0) -> None:
         """Add path-based routing rule."""
         from vmcp.routing.algorithms import RouteRule
+
         rule = RouteRule(pattern=pattern, server_id=server_id, priority=priority)
         self.path_router.add_rule(rule)
         self.clear_route_cache()
