@@ -71,7 +71,7 @@ enabled = true
             mock_config = Mock()
             mock_config.load_defaults.return_value = {"gateway": {}}
             mock_config_loader.return_value = mock_config
-            
+
             mock_registry = Mock()
             mock_registry_class.return_value = mock_registry
 
@@ -89,7 +89,7 @@ enabled = true
             mock_config = Mock()
             mock_config.load_defaults.return_value = {"gateway": {}}
             mock_config_loader.return_value = mock_config
-            
+
             mock_registry = Mock()
             mock_registry_class.return_value = mock_registry
 
@@ -243,10 +243,10 @@ enabled = true
             mock_config = Mock()
             mock_config.load_defaults.return_value = {"gateway": {}}
             mock_config_loader.return_value = mock_config
-            
+
             mock_gateway = Mock()
             mock_gateway_class.return_value = mock_gateway
-            
+
             result = runner.invoke(cli, ["start"])
             assert result.exit_code == 0
             mock_run.assert_called_once()
@@ -262,7 +262,7 @@ enabled = true
             mock_exists.return_value = True
             mock_read.return_value = "12345"
             mock_kill.side_effect = [None, ProcessLookupError()]  # First call succeeds, second raises ProcessLookupError
-            
+
             result = runner.invoke(cli, ["stop"])
             assert result.exit_code == 0
             mock_unlink.assert_called_once()
@@ -311,10 +311,10 @@ enabled = true
             mock_config = Mock()
             mock_config.load_defaults.return_value = {"gateway": {}}
             mock_config_loader.return_value = mock_config
-            
+
             mock_registry = Mock()
             mock_registry_class.return_value = mock_registry
-            
+
             mock_repo = Mock()
             mock_repo.search_servers.return_value = [
                 {
@@ -325,7 +325,7 @@ enabled = true
                 }
             ]
             mock_repo_class.return_value = mock_repo
-            
+
             # Mock the async function to call our mock directly
             def run_mock(coro):
                 return None
@@ -345,10 +345,10 @@ enabled = true
             mock_config = Mock()
             mock_config.load_defaults.return_value = {"gateway": {}}
             mock_config_loader.return_value = mock_config
-            
+
             mock_registry = Mock()
             mock_registry_class.return_value = mock_registry
-            
+
             mock_repo = Mock()
             mock_repo.get_repository_stats.return_value = {
                 "discovery": {"total_servers": 14, "source_types": []},
@@ -356,7 +356,7 @@ enabled = true
                 "registry": {"total_servers": 2, "healthy_servers": 2}
             }
             mock_repo_class.return_value = mock_repo
-            
+
             # Mock the async function to call our mock directly
             def run_mock(coro):
                 return None

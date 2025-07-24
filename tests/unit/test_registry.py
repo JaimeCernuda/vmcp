@@ -1,13 +1,12 @@
 """Tests for server registry functionality."""
 
-import asyncio
 import tempfile
 from pathlib import Path
 
 import pytest
 
 from vmcp.errors import RegistryError, ServerNotFoundError
-from vmcp.registry.registry import MCPServerConfig, Registry, MCPServerState
+from vmcp.registry.registry import MCPServerConfig, MCPServerState, Registry
 
 
 class TestMCPServerConfig:
@@ -35,7 +34,7 @@ class TestMCPServerConfig:
             name="Test Server",
             environment={"HOME": "$HOME", "USER": "testuser"}
         )
-        
+
         expanded = config.expand_environment()
         assert "HOME" in expanded
         assert "USER" in expanded
@@ -60,12 +59,12 @@ class TestMCPServerState:
         """Test health update."""
         config = MCPServerConfig(id="test-server", name="Test Server")
         state = MCPServerState(config=config)
-        
+
         state.update_health(True)
         assert state.is_healthy is True
         assert state.last_health_check is not None
         assert state.uptime_start is not None
-        
+
         state.update_health(False, "Connection failed")
         assert state.is_healthy is False
         assert state.last_error == "Connection failed"
@@ -76,15 +75,15 @@ class TestMCPServerState:
         """Test request recording."""
         config = MCPServerConfig(id="test-server", name="Test Server")
         state = MCPServerState(config=config)
-        
+
         state.record_request(True)
         assert state.total_requests == 1
         assert state.failed_requests == 0
-        
+
         state.record_request(False)
         assert state.total_requests == 2
         assert state.failed_requests == 1
-        
+
         assert state.get_error_rate() == 50.0
 
 
@@ -212,7 +211,7 @@ class TestRegistry:
 
         await registry.register_server(server1)
         await registry.register_server(server2)
-        
+
         # Update health status
         state1 = registry.get_server("server1")
         state2 = registry.get_server("server2")
@@ -258,7 +257,7 @@ class TestRegistry:
 
         await registry.register_server(server1)
         await registry.register_server(server2)
-        
+
         # Update health status
         state1 = registry.get_server("server1")
         state2 = registry.get_server("server2")

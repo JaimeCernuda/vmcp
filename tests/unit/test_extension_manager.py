@@ -4,7 +4,7 @@ import json
 import tempfile
 import zipfile
 from pathlib import Path
-from unittest.mock import Mock, patch
+from unittest.mock import patch
 
 import pytest
 
@@ -23,12 +23,12 @@ class TestExtensionManager:
     def extension_manager(self, temp_dir):
         """Create an extension manager with temporary directories."""
         vmcp_home = temp_dir / ".vmcp"
-        
+
         # Create necessary directories
         vmcp_home.mkdir()
-        
+
         manager = ExtensionManager(vmcp_home=str(vmcp_home))
-        yield manager
+        return manager
 
     @pytest.fixture
     def sample_manifest(self):

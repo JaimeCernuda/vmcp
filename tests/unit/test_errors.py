@@ -259,9 +259,9 @@ class TestErrorFromJSONRPC:
             "message": "Connection failed",
             "data": {"host": "localhost", "port": 3000}
         }
-        
+
         error = error_from_json_rpc(error_dict, request_id="test-123")
-        
+
         assert error.code == VMCPErrorCode.TRANSPORT_ERROR
         assert error.message == "Connection failed"
         assert error.data["host"] == "localhost"
@@ -275,9 +275,9 @@ class TestErrorFromJSONRPC:
             "message": "Unknown error",
             "data": {}
         }
-        
+
         error = error_from_json_rpc(error_dict)
-        
+
         assert error.code == VMCPErrorCode.INTERNAL_ERROR
         assert error.message == "Unknown error"
         assert error.data["original_code"] == 99999
