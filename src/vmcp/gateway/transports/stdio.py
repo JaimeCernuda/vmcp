@@ -328,7 +328,9 @@ class StdioServerConnection:
             TransportError: If send fails
         """
         if not self._connected or not self.process:
-            raise VMCPConnectionError(f"Not connected to server {self.server_config.id}")
+            raise VMCPConnectionError(
+                f"Not connected to server {self.server_config.id}"
+            )
 
         # Generate request ID if not present
         if "id" not in message:

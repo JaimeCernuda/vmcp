@@ -255,11 +255,14 @@ class TestExtensionManager:
             ) as mock_find:
                 mock_find.return_value = str(sample_vext_file)
 
-                with patch.object(
-                    extension_manager, "uninstall_extension"
-                ) as mock_uninstall, patch.object(
-                    extension_manager, "install_extension"
-                ) as mock_install:
+                with (
+                    patch.object(
+                        extension_manager, "uninstall_extension"
+                    ) as mock_uninstall,
+                    patch.object(
+                        extension_manager, "install_extension"
+                    ) as mock_install,
+                ):
                     mock_uninstall.return_value = True
                     mock_install.return_value = True
 

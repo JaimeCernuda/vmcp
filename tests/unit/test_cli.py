@@ -49,7 +49,10 @@ enabled = true
 
     def test_status_command_running(self, runner):
         """Test status command when gateway is running."""
-        with patch("vmcp.cli.main.check_gateway_status") as mock_check, patch("vmcp.cli.main.get_gateway_info") as mock_info:
+        with (
+            patch("vmcp.cli.main.check_gateway_status") as mock_check,
+            patch("vmcp.cli.main.get_gateway_info") as mock_info,
+        ):
             mock_check.return_value = True
             mock_info.return_value = {
                 "status": "running",

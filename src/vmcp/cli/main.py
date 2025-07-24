@@ -64,7 +64,6 @@ logger = structlog.get_logger(__name__)
 def install_shell_completion(shell: str) -> None:
     """Install shell completion for the specified shell."""
 
-
     if shell == "bash":
         completion_script = """
 # vMCP bash completion

@@ -77,7 +77,9 @@ class TestConfigLoader:
 
     def test_load_config_file_not_found(self, loader):
         """Test loading config when file doesn't exist."""
-        with pytest.raises((FileNotFoundError, OSError), match="Configuration file not found"):
+        with pytest.raises(
+            (FileNotFoundError, OSError), match="Configuration file not found"
+        ):
             loader.load_from_file("nonexistent_config.toml")
 
     def test_load_config_invalid_toml(self, loader):
@@ -87,7 +89,10 @@ class TestConfigLoader:
             config_path = f.name
 
         try:
-            with pytest.raises((ValueError, OSError), match="(Invalid TOML syntax|Configuration file not found)"):
+            with pytest.raises(
+                (ValueError, OSError),
+                match="(Invalid TOML syntax|Configuration file not found)",
+            ):
                 loader.load_from_file(config_path)
         finally:
             Path(config_path).unlink()

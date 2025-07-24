@@ -196,7 +196,9 @@ class ConnectionPool:
                     for conn in self.connections:
                         if not conn.in_use and conn.healthy:
                             # Validate if needed
-                            if conn.needs_validation(self.config.validation_interval) and not await self._validate_connection(conn):
+                            if conn.needs_validation(
+                                self.config.validation_interval
+                            ) and not await self._validate_connection(conn):
                                 continue
 
                             # Check if connection is too old
@@ -405,7 +407,10 @@ class ConnectionPool:
                     continue
 
                 # Check for idle timeout
-                if conn.is_idle_timeout(self.config.idle_timeout) and len(self.connections) > self.config.min_size:
+                if (
+                    conn.is_idle_timeout(self.config.idle_timeout)
+                    and len(self.connections) > self.config.min_size
+                ):
                     connections_to_retire.append(conn)
                     self._stats["idle_evictions"] += 1
                     continue
@@ -417,7 +422,9 @@ class ConnectionPool:
                     continue
 
                 # Validate connection if needed
-                if conn.needs_validation(self.config.validation_interval) and not await self._validate_connection(conn):
+                if conn.needs_validation(
+                    self.config.validation_interval
+                ) and not await self._validate_connection(conn):
                     connections_to_retire.append(conn)
 
             # Retire connections outside the lock

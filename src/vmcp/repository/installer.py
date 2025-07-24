@@ -96,7 +96,9 @@ class MCPInstaller:
             # Cleanup on failure
             if install_path.exists():
                 shutil.rmtree(install_path, ignore_errors=True)
-            raise InstallationFailedError(f"Installation failed for {server_id}: {e}") from e
+            raise InstallationFailedError(
+                f"Installation failed for {server_id}: {e}"
+            ) from e
 
     async def update_server(self, server_info: MCPServerInfo) -> str:
         """

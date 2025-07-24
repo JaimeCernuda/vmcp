@@ -83,7 +83,9 @@ class ExtensionManager:
                 repo_data = json.load(f)
             return repo_data.get("extensions", [])
         except Exception as e:
-            raise RepositoryError(f"Failed to load repository {repository_id}: {e}") from e
+            raise RepositoryError(
+                f"Failed to load repository {repository_id}: {e}"
+            ) from e
 
     def list_installed_extensions(self) -> list[dict[str, Any]]:
         """List all installed extensions."""

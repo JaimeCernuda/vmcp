@@ -199,7 +199,10 @@ class CircuitBreaker:
             self._cleanup_old_calls()
 
             # State transitions
-            if self._state == CircuitState.HALF_OPEN and self._stats.consecutive_successes >= self.config.half_open_max_calls:
+            if (
+                self._state == CircuitState.HALF_OPEN
+                and self._stats.consecutive_successes >= self.config.half_open_max_calls
+            ):
                 await self._transition_to(CircuitState.CLOSED)
 
     async def _on_failure(self, duration: float) -> None:
@@ -222,7 +225,9 @@ class CircuitBreaker:
             self._cleanup_old_calls()
 
             # State transitions
-            if self._state == CircuitState.HALF_OPEN or (self._state == CircuitState.CLOSED and self._should_open_circuit()):
+            if self._state == CircuitState.HALF_OPEN or (
+                self._state == CircuitState.CLOSED and self._should_open_circuit()
+            ):
                 await self._transition_to(CircuitState.OPEN)
 
     def _should_open_circuit(self) -> bool:
