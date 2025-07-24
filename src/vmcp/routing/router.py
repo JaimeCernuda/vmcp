@@ -20,7 +20,7 @@ from .algorithms import (
     PathBasedRouter,
 )
 from .circuit_breaker import CircuitBreakerRegistry
-from .loadbalancer import LoadBalancerFactory, RoundRobinBalancer
+from .loadbalancer import LoadBalancerFactory
 
 logger = logging.getLogger(__name__)
 

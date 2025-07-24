@@ -179,7 +179,7 @@ class PathBasedRouter(RoutingAlgorithm):
             self.rules.append(rule)
         else:
             raise ValueError(f"PathBasedRouter only accepts RouteRule, got {type(rule)}")
-    
+
     def add_path_rule(
         self,
         pattern: str,
